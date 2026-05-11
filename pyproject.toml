@@ -9,6 +9,7 @@ dependencies = [
     "langchain>=1.2.18",
     "langchain-openai>=1.2.1",
     "langgraph>=1.1.10",
+    "loguru>=0.7.3",
     "mypy>=2.0.0",
     "pandas>=3.0.2",
     "psycopg[binary]>=3.3.4",
