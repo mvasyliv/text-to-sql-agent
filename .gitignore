@@ -8,3 +8,23 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment files (secrets)
+.env
+.env.prod
+.env.local
+
+# Local data
+data/
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
