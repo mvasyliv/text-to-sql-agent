@@ -19,7 +19,14 @@ Rules:
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
-| _No open tasks_ | - | - | - | Add `planned`, `in_progress`, or `blocked` tasks here (newest to oldest). | - |
+| T-2026-05-11-017 | 2026-05-11 | Define prompt promotion and rollback runbook | planned | Define operational steps and thresholds for draft->review->approved->canary->active lifecycle with explicit rollback triggers. | `docs/TASKS.md`, `docs/AGENTS.md`, `docs/WORKLOG.md` |
+| T-2026-05-11-016 | 2026-05-11 | Define prompt metrics and evaluation gates | planned | Finalize quality and safety gates (validity, execution success, policy violations, leakage checks) for all prompt versions. | `docs/TASKS.md`, `docs/WORKLOG.md`, `tests/` |
+| T-2026-05-11-015 | 2026-05-11 | Design prompt storage and version registry | planned | Select external prompt storage approach and versioning rules (id, version, status, checksum, ownership). | `docs/TASKS.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` |
+| T-2026-05-11-014 | 2026-05-11 | Define user override policy and validation boundaries | planned | Specify which prompt sections users may customize and which safety sections are immutable, including validation rules. | `docs/TASKS.md`, `docs/DECISIONS.md`, `docs/AGENTS.md` |
+| T-2026-05-11-013 | 2026-05-11 | Create change request process for prompt updates | planned | Define required change request fields, review flow, approvers, and emergency hotfix path for prompt changes. | `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/AGENTS.md` |
+| T-2026-05-11-012 | 2026-05-11 | Prepare enterprise prompt manifest contract | planned | Define mandatory enterprise manifest fields for multi-tenant isolation, compliance, auditability, and controlled rollout. | `docs/TASKS.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` |
+| T-2026-05-11-011 | 2026-05-11 | Prepare MVP prompt manifest contract | planned | Define minimal required manifest fields for safe read-only SQL generation and basic rollout control. | `docs/TASKS.md`, `docs/ARCHITECTURE.md`, `docs/WORKLOG.md` |
+| T-2026-05-11-010 | 2026-05-11 | Audit SQL dialect differences and prompt scope | planned | Create a concise matrix of PostgreSQL, MySQL, Athena, and SQLite differences to scope per-dialect prompt requirements and examples. | `docs/TASKS.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` |
 
 ## COMPLETED
 
