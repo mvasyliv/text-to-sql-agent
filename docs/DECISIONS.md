@@ -47,3 +47,31 @@ Rules:
 - Decision: `uv.lock` is the source of truth for pinned dependency versions and must be committed alongside `pyproject.toml`.
 - Decision: VS Code is configured automatically to use `venvtext2sql` as the default Python interpreter via `.vscode/settings.json`.
 - Rationale: This ensures reproducible builds, a single source of truth for dependency versions, and automatic environment activation for a frictionless developer experience.
+
+## D-2026-05-11-006
+
+- Date: 2026-05-11
+- Related task: T-2026-05-11-010 (scope planning for prompt manifest and governance)
+- Decision: Workspace-specific IDE settings (e.g., Markdown Preview styling, optional extensions) that do not affect code behavior must be stored locally in the user's VS Code profile, not in `.vscode/settings.json`.
+- Decision: `${VSCODE_USER_PROMPTS_FOLDER}/../User/settings.json` (typically `~/.config/Code/User/settings.json` on Linux) is the prescribed location for personal workspace customizations.
+- Decision: `.vscode/` directory is in `.gitignore` to prevent IDE configuration drift across team members.
+- Rationale: This separates project-essential configuration (Python interpreter, linting) from personal IDE preferences (preview styling, extensions), avoiding unnecessary git changes and respecting individual developer workflow choices.
+
+### Local Markdown Preview Setup (Optional)
+
+To enable GitHub-like table rendering in VS Code Markdown Preview for this workspace:
+
+1. Open VS Code **User Settings** (Ctrl+Shift+P → "Preferences: Open User Settings (JSON)").
+2. Add the following snippet to `~/.config/Code/User/settings.json`:
+   ```json
+   "markdown.preview.fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+   "markdown.preview.lineHeight": 1.6,
+   "markdown.preview.typographer": false,
+   "markdown.preview.scrollPreviewWithEditor": true,
+   "markdown.preview.scrollEditorWithPreview": true,
+   "markdown.preview.doubleClickToSwitchToEditor": true
+   ```
+3. (Optional) Install the recommended extension: **GitHub Markdown Preview** (bierner.github-markdown-preview).
+4. Open any `.md` file and press **Ctrl+Shift+V** (Markdown Preview) or **Ctrl+K, V** (Preview to the side).
+
+This setup remains local to your VS Code profile and does not appear in `git status`.
