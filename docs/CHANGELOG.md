@@ -15,6 +15,20 @@ The format is intentionally simple and uses dated sections until versioned relea
 - Initial architecture document in `docs/ARCHITECTURE.md` describing the target system design.
 - VS Code configuration in `.vscode/settings.json` for automatic `venvtext2sql` activation.
 - Explicit environment setup and dependency management instructions.
+- Comprehensive environment-based configuration system:
+  - `.env` template file with 70+ configuration keys covering all project aspects.
+  - `.env.dev` for local development with localhost and debug settings.
+  - `.env.prod` for production with remote hosts and strict security (not committed).
+  - `.env.test` for CI/CD and testing with in-memory databases and mocked services.
+  - Configuration categories: project settings, database drivers (SQLite, PostgreSQL, Athena, MySQL), LLM parameters, caching, feature flags, rate limiting, secrets management, observability, audit logging, migrations, validation, multi-tenant support, API, and monitoring.
+  - Updated `.gitignore` to protect `.env`, `.env.prod`, and `.env.local` from accidental commits.
+- Production-ready structured logging using loguru (`loguru==0.7.3`):
+  - `src/text_to_sql_agent/config/logging.py` with `LoggingConfig` (Pydantic model) and `setup_logging()` function.
+  - Support for text (colored, readable) and JSON (production) output formats.
+  - Per-module log level configuration (agents, services, repositories, graphs, models, prompts).
+  - File rotation with gzip compression and configurable retention policies.
+  - Flexible output modes: stdout, file, or combined.
+  - Context binding support for request tracing.
 
 ### Changed
 
