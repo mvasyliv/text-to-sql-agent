@@ -29,6 +29,13 @@ The format is intentionally simple and uses dated sections until versioned relea
   - File rotation with gzip compression and configurable retention policies.
   - Flexible output modes: stdout, file, or combined.
   - Context binding support for request tracing.
+- Specialized GitHub Copilot agents (`docs/AGENTS.md`):
+  - **Architect Agent** (`.architect.instructions.md`): System architecture design and review.
+  - **Task Manager Agent** (`.taskmanager.instructions.md`): Task planning and project organization.
+  - **Developer Agent** (`.developer.instructions.md`): Code implementation and feature development.
+  - **Tester Agent** (`.tester.instructions.md`): Quality assurance and comprehensive testing.
+  - **Documentarian Agent** (`.documentarian.instructions.md`): Documentation and technical writing.
+  - Complete agent usage guide with example workflows and prompts.
 
 ### Changed
 

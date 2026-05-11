@@ -51,7 +51,99 @@ Rules:
 - Updated `.vscode/settings.json` to set `python.interpreter.infoVisibility` to `always`.
 - Kept `venvtext2sql/bin/python` as the workspace default interpreter so the status bar consistently shows the canonical environment label.
 
-### T-2026-05-11-008 - Set up loguru-based structured logging
+### T-2026-05-11-009 - Set up specialized GitHub Copilot agents
+
+**Task completed.** Created 5 specialized GitHub Copilot agents for different project roles.
+
+**Files Created:**
+- `.architect.instructions.md`: Architecture design and system review agent
+- `.taskmanager.instructions.md`: Task planning and project organization agent
+- `.developer.instructions.md`: Code implementation and feature development agent
+- `.tester.instructions.md`: Quality assurance and testing agent
+- `.documentarian.instructions.md`: Documentation and technical writing agent
+- `docs/AGENTS.md`: Comprehensive guide for using the agents
+
+**Agent Specifications**
+
+**1. Architect Agent** (`.architect.instructions.md`)
+- **Responsibility**: Design, review, and improve system architecture
+- **Scope**: Component design, dependency analysis, refactoring proposals
+- **Output**: Architecture diagrams, design documents, decision rationale
+- **Key Files**: ARCHITECTURE.md, DECISIONS.md
+- **Constraint**: Design-only; no direct implementation
+
+**2. Task Manager Agent** (`.taskmanager.instructions.md`)
+- **Responsibility**: Create, plan, and track project tasks
+- **Scope**: Task creation, breakdown, prioritization, progress tracking
+- **Output**: Task entries in TASKS.md, effort estimates, dependencies
+- **Key Files**: TASKS.md, WORKLOG.md
+- **Constraint**: Task format (T-YYYY-MM-DD-NNN) must be followed
+
+**3. Developer Agent** (`.developer.instructions.md`)
+- **Responsibility**: Implement features and write production code
+- **Scope**: Code implementation, new modules, refactoring, Git workflow
+- **Output**: Python code with type hints, feature branches, proper commits
+- **Key Files**: src/, pyproject.toml, uv.lock
+- **Constraint**: Type hints mandatory, feature branches only, no direct main commits
+
+**4. Tester/QA Agent** (`.tester.instructions.md`)
+- **Responsibility**: Ensure code quality and write comprehensive tests
+- **Scope**: Unit/integration tests, mocking, edge cases, coverage, linting
+- **Output**: Test code, coverage reports, quality validation
+- **Key Files**: tests/, pytest config
+- **Constraint**: 80%+ coverage target, deterministic tests
+
+**5. Documentarian Agent** (`.documentarian.instructions.md`)
+- **Responsibility**: Document system, APIs, and maintain documentation quality
+- **Scope**: ARCHITECTURE.md, DECISIONS.md, CHANGELOG.md, WORKLOG.md, README
+- **Output**: Clear documentation, Mermaid diagrams, examples
+- **Key Files**: docs/*, README.md
+- **Constraint**: English only, Markdown format, no outdated information
+
+**Workflow Integration**
+
+Typical multi-agent workflow:
+1. **Architect** designs feature
+2. **Task Manager** breaks it into tasks
+3. **Developer** implements from tasks
+4. **Tester** validates implementation
+5. **Documentarian** documents the work
+
+Each agent has specific constraints and file responsibilities to ensure:
+- No overlapping work
+- Clear accountability
+- Quality standards are met
+- Documentation stays current
+
+**Usage in VS Code**
+
+Activate agents via Copilot Chat:
+- Ask with agent reference: "@architect: Design..." 
+- Or look for agent selector dropdown in Copilot Chat
+- Each agent applies its specific instructions automatically
+
+**Key Features**
+- **Role-based constraints**: Each agent knows its boundaries
+- **Shared project rules**: All inherit base rules from `.github/copilot-instructions.md`
+- **Complementary expertise**: Agents work together in sequence
+- **Clear responsibilities**: No overlapping scope
+- **Type-hinted code**: Developer agent enforces type hints
+- **High test coverage**: Tester agent targets 80%+ coverage
+- **Architectural alignment**: All code follows Architect's design
+
+**Documentation**
+- Full guide in `docs/AGENTS.md`
+- Example prompts for each agent
+- Quick reference table
+- Coordination patterns for multi-agent workflows
+
+**Benefits**
+- Faster task completion through specialized agents
+- Better code quality (dedicated testing)
+- Comprehensive documentation (dedicated writer)
+- Consistent architecture (architect reviews)
+- Proper planning (task manager breaks down work)
+- Reduced context switching for users
 
 **Task completed.** Implemented production-ready structured logging using loguru.
 
