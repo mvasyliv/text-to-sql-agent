@@ -75,3 +75,11 @@ To enable GitHub-like table rendering in VS Code Markdown Preview for this works
 4. Open any `.md` file and press **Ctrl+Shift+V** (Markdown Preview) or **Ctrl+K, V** (Preview to the side).
 
 This setup remains local to your VS Code profile and does not appear in `git status`.
+
+## D-2026-05-11-007
+
+- Date: 2026-05-11
+- Related task: T-2026-05-11-010 (scope planning for prompt manifest and governance)
+- Decision: Recommended VS Code extensions for this project are listed in `.vscode/extensions.json` to guide contributors toward a consistent developer experience.
+- Decision: All extensions listed are for productivity, code quality, or collaboration only. No extension is required to run or test code; all are optional tools to enhance local workflow.
+- Rationale: VS Code's extension recommendation system allows contributors to adopt a standard toolchain with one click ("Install All Recommended") without enforcing mandatory installation. This balances team consistency with individual choice.
