@@ -1,5 +1,7 @@
 """Prompt templates and prompt-scope contracts."""
 
+__version__ = "0.0.1"
+
 from .dialect_scope import (
     DIALECT_SCOPE_MATRIX,
     DialectPromptScope,

@@ -63,6 +63,7 @@ This rule applies to:
 - Do not rewrite unrelated files.
 - When creating new modules, place them in the most specific existing package.
 - Keep comments brief and only add them when the code is not self-explanatory.
+- Every `__init__.py` must declare `__version__ = "0.0.1"` (or the current package version) immediately after the module docstring.
 
 ## Validation
 
