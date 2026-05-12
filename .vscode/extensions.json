@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-python.vscode-pylance",
+    "LittleFoxTeam.vscode-python-test-adapter",
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "mtxr.sqltools",
+    "aaron-bond.better-comments",
+    "bierner.github-markdown-preview",
+    "shd101wyy.markdown-preview-enhanced",
+    "rangav.vscode-thunder-client",
+    "wayou.vscode-todo-highlight"
+  ]
+}

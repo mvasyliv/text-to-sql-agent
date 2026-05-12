@@ -121,6 +121,15 @@ Expected responsibilities:
 - inject schema context safely
 - keep SQL generation instructions consistent
 - support prompt reuse across services and graphs
+- encode dialect-specific prompt constraints (PostgreSQL, MySQL, Athena, SQLite)
+
+Dialect scope baseline for prompts is documented in `docs/SQL_DIALECT_SCOPE.md` and represented in typed form in `src/text_to_sql_agent/prompts/dialect_scope.py`.
+MVP prompt manifest contract is documented in `docs/PROMPT_MANIFEST_MVP.md` and represented in typed form in `src/text_to_sql_agent/prompts/prompt_manifest.py`.
+Enterprise prompt manifest contract is documented in `docs/PROMPT_MANIFEST_ENTERPRISE.md` and represented in typed form in `src/text_to_sql_agent/prompts/prompt_manifest.py`.
+Prompt update governance process is documented in `docs/PROMPT_CHANGE_REQUEST_PROCESS.md` and represented in typed form in `src/text_to_sql_agent/prompts/change_request.py`.
+Prompt user override boundaries are documented in `docs/PROMPT_USER_OVERRIDE_POLICY.md` and represented in typed form in `src/text_to_sql_agent/prompts/override_policy.py`.
+Prompt storage and version registry design is documented in `docs/PROMPT_STORAGE_VERSION_REGISTRY.md` and represented in typed form in `src/text_to_sql_agent/prompts/storage_registry.py`.
+Prompt metrics and evaluation gates are documented in `docs/PROMPT_EVALUATION_GATES.md` and represented in typed form in `src/text_to_sql_agent/prompts/evaluation_gates.py`.
 
 ### Config Layer
 
@@ -211,6 +220,13 @@ The architecture should support focused tests at each layer.
 Recommended test boundaries:
 - models and validators
 - prompt builders
+- dialect scope matrix integrity and read-only example constraints
+- prompt manifest contract validation (safety placeholders, read-only mode, rollout rules)
+- enterprise manifest governance validation (tenant isolation, audit metadata, approvals, policy-level rollout constraints)
+- prompt change request governance validation (required fields, approver gates, emergency hotfix postmortem path)
+- user override boundary validation (allowed sections, immutable safety sections, payload size, rationale requirement)
+- storage/registry validation (external storage config, checksum integrity, status pointers, ownership metadata)
+- evaluation gate validation (validity, execution success, policy violation, leakage, and sample-size warnings)
 - service logic with mocked repositories and model clients
 - repository behavior against controlled test databases where appropriate
 - graph transitions and state updates

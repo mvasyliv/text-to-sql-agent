@@ -63,6 +63,7 @@ This rule applies to:
 - Do not rewrite unrelated files.
 - When creating new modules, place them in the most specific existing package.
 - Keep comments brief and only add them when the code is not self-explanatory.
+- Every `__init__.py` must declare `__version__ = "0.0.1"` (or the current package version) immediately after the module docstring.
 
 ## Validation
 
@@ -96,6 +97,8 @@ If no focused test exists, add or update one when the change affects behavior th
 - Mock external services when practical.
 - Keep fixtures local to the affected test scope unless they are broadly reusable.
 - Cover parsing, validation, SQL-generation constraints, and repository/service boundaries when relevant.
+- Mirror source package layout in tests: for `src/text_to_sql_agent/<package>/...`, place tests under `tests/text_to_sql_agent/<package>/...`.
+- Keep test filenames explicit and aligned with target modules, e.g. `test_prompt_manifest.py` for `prompt_manifest.py`.
 
 ## Dependency Management
 
