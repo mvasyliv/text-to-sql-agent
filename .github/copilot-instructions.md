@@ -96,6 +96,8 @@ If no focused test exists, add or update one when the change affects behavior th
 - Mock external services when practical.
 - Keep fixtures local to the affected test scope unless they are broadly reusable.
 - Cover parsing, validation, SQL-generation constraints, and repository/service boundaries when relevant.
+- Mirror source package layout in tests: for `src/text_to_sql_agent/<package>/...`, place tests under `tests/text_to_sql_agent/<package>/...`.
+- Keep test filenames explicit and aligned with target modules, e.g. `test_prompt_manifest.py` for `prompt_manifest.py`.
 
 ## Dependency Management
 

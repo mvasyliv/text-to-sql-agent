@@ -59,6 +59,7 @@ We have 5 specialized agents, each with distinct responsibilities and constraint
 - Run linting and type checking
 - Verify acceptance criteria
 - Maintain test coverage (80%+)
+- Keep tests in mirrored package layout (`tests/text_to_sql_agent/<package>/...`)
 
 **How to activate:**
 - Ask: "As the tester, please write tests for..."

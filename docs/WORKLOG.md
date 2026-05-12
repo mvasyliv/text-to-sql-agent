@@ -7,7 +7,84 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-05-12
+
+### T-2026-05-12-017 - Mirror tests package layout with src
+
+- Created mirrored test directories for all source packages under `tests/text_to_sql_agent/`:
+   - `agents`, `config`, `graphs`, `models`, `prompts`, `repositories`, `services`, `utils`
+- Added `.gitkeep` files to preserve empty test package directories in version control.
+- Added `tests/text_to_sql_agent/README.md` with explicit test placement mapping rules.
+- Updated `.github/copilot-instructions.md` to require mirrored test layout for future tests.
+- Updated `.tester.instructions.md` test structure and command examples to the mirrored layout.
+- Updated `docs/AGENTS.md` to include mirrored layout responsibility for the Tester/QA agent.
+
 ## 2026-05-11
+
+### T-2026-05-11-016 - Define prompt metrics and evaluation gates
+
+- Added typed evaluation gate contract in `src/text_to_sql_agent/prompts/evaluation_gates.py`.
+- Defined default gate profile (`default-v1`) with hard-fail thresholds for `validity_rate`, `execution_success_rate`, `policy_violation_rate`, and `leakage_rate`.
+- Added deterministic gate evaluation function returning blocking violations and warnings.
+- Added sample-size warning behavior with configurable `minimum_samples`.
+- Added `docs/PROMPT_EVALUATION_GATES.md` as the metrics and gate reference.
+- Added `tests/test_prompt_evaluation_gates.py` to validate pass/fail behavior and profile validation constraints.
+
+### T-2026-05-11-015 - Design prompt storage and version registry
+
+- Added typed storage and registry contract in `src/text_to_sql_agent/prompts/storage_registry.py`.
+- Defined external storage configuration model (`backend`, `bucket_or_container`, `namespace`, `object_key_prefix`, `region`).
+- Defined version record contract with status lifecycle, checksum validation, template URI validation, and ownership metadata.
+- Defined registry pointer validation for `latest_version`, `active_version`, and `canary_version` consistency.
+- Added `docs/PROMPT_STORAGE_VERSION_REGISTRY.md` with storage approach and versioning rules.
+- Added `tests/test_prompt_storage_registry.py` to validate registry boundaries and pointer integrity.
+
+### T-2026-05-11-014 - Define user override policy and validation boundaries
+
+- Added typed user override policy contract in `src/text_to_sql_agent/prompts/override_policy.py`.
+- Defined explicit customizable sections (`style_instructions`, `business_glossary`, `few_shot_examples`, `response_format_hint`, `domain_filters`).
+- Defined immutable safety and governance sections (`safety_guardrails`, `required_placeholders`, `disallowed_operations`, `read_only_enforcement`, `tenant_isolation`, `approval_workflow`).
+- Implemented validation boundaries for section membership, immutable enforcement, payload size limits, and rationale requirements.
+- Added `docs/PROMPT_USER_OVERRIDE_POLICY.md` as the policy reference.
+- Added `tests/test_prompt_override_policy.py` to validate override boundary behavior.
+
+### T-2026-05-11-013 - Create change request process for prompt updates
+
+- Added typed change request contract in `src/text_to_sql_agent/prompts/change_request.py`.
+- Defined required fields for all prompt updates, including version increment and mandatory rationale, risk, test evidence, and rollback plan.
+- Implemented standard approval gate validation requiring `prompt-owner`, `data-platform`, and `security` roles before approved/implemented/closed states.
+- Implemented emergency hotfix path with required incident id, expedited approvals, and postmortem deadline/completion checks.
+- Added `docs/PROMPT_CHANGE_REQUEST_PROCESS.md` with required fields, review flow, approvers, and emergency hotfix guidance.
+- Added `tests/test_prompt_change_request.py` to validate governance constraints and hotfix behavior.
+
+### T-2026-05-11-012 - Prepare enterprise prompt manifest contract
+
+- Extended `src/text_to_sql_agent/prompts/prompt_manifest.py` with enterprise governance models:
+   - `TenantIsolationPolicy`
+   - `PromptAuditMetadata`
+   - `PromptApprovalMetadata`
+   - `PromptManifestEnterprise`
+- Added `build_enterprise_manifest()` builder while preserving MVP contract compatibility.
+- Implemented enterprise validation rules for tenant isolation modes, audit timestamp consistency, approval metadata integrity, and policy-level rollout constraints.
+- Added `tests/test_prompt_manifest_enterprise.py` to validate enterprise contract behavior and failure modes.
+- Added `docs/PROMPT_MANIFEST_ENTERPRISE.md` as the enterprise contract reference and linked it from the MVP document.
+
+### T-2026-05-11-011 - Prepare MVP prompt manifest contract
+
+- Added a typed MVP manifest contract in `src/text_to_sql_agent/prompts/prompt_manifest.py` using Pydantic validation.
+- Defined minimal required fields for safe read-only SQL generation: identity, versioning, dialect, owner, template placeholders, read-only enforcement, guardrails, and deny-list operations.
+- Added basic rollout control contract (`off`, `canary`, `full`) with strict percentage validation and active-status rollout requirements.
+- Added `docs/PROMPT_MANIFEST_MVP.md` as the human-readable contract reference.
+- Added `tests/test_prompt_manifest.py` to validate contract rules and failure modes.
+- Updated `src/text_to_sql_agent/prompts/__init__.py` exports for manifest contract reuse.
+
+### T-2026-05-11-010 - Audit SQL dialect differences and prompt scope
+
+- Created `docs/SQL_DIALECT_SCOPE.md` with a concise comparison matrix for PostgreSQL, MySQL, Athena, and SQLite focused on prompt-relevant SQL differences.
+- Added dialect-specific prompt scope rules and few-shot example selection guidance.
+- Implemented a typed prompt-scope contract in `src/text_to_sql_agent/prompts/dialect_scope.py` to keep dialect constraints reusable in code.
+- Added `tests/test_dialect_scope.py` to validate matrix completeness, read-only example constraints, and dialect lookup behavior.
+- Updated `docs/ARCHITECTURE.md` to reference dialect scope governance and its test boundary.
 
 ### T-2026-05-11-001 - Create project working instructions
 
