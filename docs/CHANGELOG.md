@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
+## 2026-05-15
+
+### Changed
+
+- Updated `.env.test` so SQLite test runs use `tests/text_to_sql_agent/db/test_database.db` instead of an in-memory database.
+- Added a config test that locks the test environment to the repository-backed SQLite database path.
+
 ## 2026-05-11
 
 ### Added

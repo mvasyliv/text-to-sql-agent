@@ -7,6 +7,14 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-05-15
+
+### T-2026-05-15-018 - Point test SQLite settings to repository database
+
+- Updated `.env.test` so `SQLITE_PATH` points to `tests/text_to_sql_agent/db/test_database.db`.
+- Replaced the config scaffold test with a check that the test environment references the repository-backed SQLite file.
+- Kept the SQLite test database path deterministic and local to the repository.
+
 ## 2026-05-12
 
 ### T-2026-05-12-017 - Mirror tests package layout with src
