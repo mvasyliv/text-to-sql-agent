@@ -7,7 +7,225 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-05-18
+
+### T-2026-05-18-037 - Implement secret placeholder resolution for environment config
+
+- Identified placeholder-based secret markers (`[LOAD_FROM_SECRETS]`) in production environment configuration.
+- Registered a planned task to implement runtime resolution of secret placeholders into actual values via a dedicated secrets-loading mechanism.
+- Scope includes configuration-layer integration and explicit fallback behavior for local and test environments.
+- Agreed proposal for implementation:
+  - Source priority: process environment variables -> secrets backend -> `.env*` values.
+  - Production backend: AWS Secrets Manager (`SECRETS_BACKEND=aws_secrets_manager`).
+  - Local/test backend: file-based secret provider (non-committed local secret file).
+  - Placeholder policy: resolve exact token `[LOAD_FROM_SECRETS]` only.
+  - Failure policy: fail fast in production for unresolved required placeholders; emit warnings in local/test for optional values.
+  - Verification: add unit tests for resolver precedence and unresolved-placeholder behavior, plus local smoke test with file backend.
+- Implementation started (`in_progress`):
+  - Added `src/text_to_sql_agent/config/secrets.py` with placeholder resolver and provider abstractions.
+  - Added `FileSecretsProvider` (JSON file backend) and `AwsSecretsManagerProvider` (JSON secret payload backend).
+  - Added `resolve_secret_placeholders()` with source priority and environment-specific unresolved-placeholder policy.
+  - Exported resolver utilities via `src/text_to_sql_agent/config/__init__.py`.
+  - Added focused tests in `tests/text_to_sql_agent/config/test_secrets.py` for precedence, prod fail-fast, dev warnings, and file backend behavior.
+
+### T-2026-05-18-036 - Refactor terminal prototype into project architecture
+
+**Code review findings (initial analysis):**
+- `main_terminal.py` had hardcoded `DB_PATH = "database.db"`, raw f-string PRAGMA calls (`PRAGMA table_info({table_name})`), arbitrary SQL execution without read-only enforcement, and no use of any established project layer.
+
+**Implementation:**
+- Replaced raw SQLite introspection with `SQLiteIntrospectionProvider.introspect()` + `normalize_raw_schema()` — canonical project path for schema access.
+- DB path now read from `SQLITE_PATH` env var (with `database.db` fallback for ad-hoc use).
+- `get_db_schema(table_filter)` accepts an optional list of table names, enabling `schema users orders` style commands from the terminal.
+- Read-only SQL enforcement: `query_database()` rejects any input not starting with `SELECT`, `EXPLAIN`, or `WITH` before touching the database.
+- Loguru integrated at `WARNING` level on stderr so terminal output stays clean.
+- Agent executor is now lazily initialised on the first natural-language query — `schema` commands work without `OPENAI_API_KEY`.
+- Migrated agent wiring from removed LangChain v0 API (`AgentExecutor`) to the current LangGraph API (`langgraph.prebuilt.create_react_agent`).
+- Added environment key alias support in terminal agent startup: `OPENAI_API_KEY`, `OPENAI_KEY`, `OPENAI_TOKEN`.
+- Added natural-language schema shortcuts (`view full database schema`, `show schema for ...`) that bypass LLM initialization and directly call schema inspection.
+- Removed `show_graph` tool (no real implementation) and the `graph` shortcut.
+- `ruff check` passes; AST-level parse confirmed valid.
+
+### T-2026-05-15-035 - Implement SchemaReaderAgent entrypoint
+
+- Added `src/text_to_sql_agent/agents/schema_reader_agent.py` with a thin `SchemaReaderAgent` wrapper.
+  - `build_initial_schema_read_state()` maps `SchemaRefreshRequest` into the full `SchemaReadState` shape expected by the graph.
+  - `SchemaReaderAgent.run()` accepts a request plus `connection_config_ref`, builds the initial state, and invokes the compiled schema ingestion graph.
+  - The agent supports explicit request ID overrides and a deterministic default request ID factory.
+- Updated `src/text_to_sql_agent/agents/__init__.py` to export the new entrypoint helpers.
+- Replaced the agents scaffold test with targeted tests that verify state construction and graph invocation behavior.
+
+### T-2026-05-15-034 - Assemble LangGraph schema ingestion graph and edges
+
+- Added `src/text_to_sql_agent/graphs/schema_graph.py` with a compiled `StateGraph` for schema ingestion.
+  - The graph sequences `load_connection_context` -> `introspect_schema` -> `normalize_schema` -> `build_schema_documents` -> `persist_schema_snapshot` -> `index_schema_embeddings` -> completion.
+  - Conditional edges now route failed nodes through retry or terminal failure handling, and successful runs end in a done state with `completed_at` set.
+  - The graph builder accepts injected connection resolution, provider, snapshot, vector store, and embedder dependencies so tests can run deterministically.
+- Updated `src/text_to_sql_agent/graphs/__init__.py` to export `build_schema_ingestion_graph`.
+- Replaced the graphs scaffold test with concrete graph workflow tests covering successful completion, one retry after transient introspection failure, and terminal failure when retries are exhausted.
+
 ## 2026-05-15
+
+### T-2026-05-15-033 - Implement LangGraph schema ingestion graph nodes
+
+- Created `src/text_to_sql_agent/graphs/schema_nodes.py` with explicit LangGraph node functions.
+  - `load_connection_context()` validates connection references and resolves dialect metadata.
+  - `introspect_schema()` resolves the provider and captures raw introspection results.
+  - `normalize_schema()` converts raw introspection into canonical `DatabaseSchema` and stores it in state as `normalized_schema`.
+  - `build_schema_documents()` derives stable document IDs from the normalized schema.
+  - `persist_schema_snapshot()` saves the canonical schema snapshot and records `snapshot_id`.
+  - `index_schema_embeddings()` builds documents, generates embeddings, and persists embedding records.
+- Updated `src/text_to_sql_agent/graphs/state.py` to add the `normalized_schema` field for the canonical intermediate schema payload.
+- Updated `src/text_to_sql_agent/graphs/__init__.py` to export the node functions.
+- Added 6 tests in `tests/text_to_sql_agent/graphs/test_schema_nodes.py` covering each node and state transitions.
+- Updated `tests/text_to_sql_agent/graphs/test_state.py` to account for the new `normalized_schema` field.
+- All graph state and node tests pass.
+
+### T-2026-05-15-032 - Implement schema indexing service
+
+- Created `src/text_to_sql_agent/services/schema_indexing.py` with `index_schema_embeddings()`.
+  - Accepts `list[SchemaDocument]`, a `VectorStoreRepository`, and an injected embedder callable.
+  - Builds `SchemaEmbeddingRecord` entries with deterministic or injected embedding IDs.
+  - Uses timezone-aware indexing timestamps and short-circuits on empty input.
+  - Returns the embedding IDs produced by the vector store repository.
+- Updated `src/text_to_sql_agent/services/__init__.py` to export `index_schema_embeddings`.
+- Added 5 tests in `tests/text_to_sql_agent/services/test_schema_indexing.py` covering return values, record materialization, embedder invocation count, default embedding IDs, and empty-input handling.
+- All 5 indexing tests pass.
+
+### T-2026-05-15-031 - Define abstract vector store repository interface
+
+- Created `src/text_to_sql_agent/repositories/vector_store_repository.py` with abstract `VectorStoreRepository` contract.
+  - Defines `upsert_documents(records)` for embedded schema records.
+  - Defines `search_similar(query_vector, limit, database_id, snapshot_id)` for vector search with optional filtering.
+  - Defines `delete_by_snapshot(snapshot_id)` for snapshot-scoped cleanup.
+- Updated `src/text_to_sql_agent/repositories/__init__.py` to export `VectorStoreRepository`.
+- Added 7 tests in `tests/text_to_sql_agent/repositories/test_vector_store_repository.py` covering abstract instantiation, incomplete subclasses, upsert return values, search filtering, search limits, delete counts, and empty-result behavior.
+- All 7 vector store contract tests pass.
+
+### T-2026-05-15-030 - Implement schema document building service
+
+- Created `src/text_to_sql_agent/services/schema_document_builder.py` with `build_schema_documents()`.
+  - Builds `SchemaDocument` records for `table`, `column_group`, and `relationship` granularity.
+  - Produces deterministic document IDs from snapshot, table, granularity, and relationship columns.
+  - Orders columns by `ordinal_position` for stable content and column lists.
+  - Generates readable content strings that summarize table metadata, columns, and foreign-key relationships.
+  - Carries domain tags and basic metadata into each document.
+- Updated `src/text_to_sql_agent/services/__init__.py` to export `build_schema_documents`.
+- Added 5 tests in `tests/text_to_sql_agent/services/test_schema_document_builder.py` covering document types, deterministic IDs, readable content, metadata propagation, and column ordering.
+- All 5 builder tests pass.
+
+### T-2026-05-15-029 - Implement schema snapshot repository
+
+- Created `src/text_to_sql_agent/repositories/schema_snapshot_repository.py` with a file-based `SchemaSnapshotRepository`.
+  - Persists each `DatabaseSchema` snapshot as a JSON file named by `snapshot_id`.
+  - Stores both the canonical schema payload and a `SchemaSnapshotRef` summary in the same file.
+  - Supports `save()`, `load()`, `list()`, and `delete()` operations.
+  - Creates the storage directory on initialization.
+- Updated `src/text_to_sql_agent/repositories/__init__.py` to export `SchemaSnapshotRepository`.
+- Added 9 tests in `tests/text_to_sql_agent/repositories/test_schema_snapshot_repository.py` covering save/load round-trip, list filtering, delete behavior, missing snapshot errors, and storage directory creation.
+- All 9 repository snapshot tests pass.
+
+### T-2026-05-15-028 - Implement schema normalization service
+
+- Created `src/text_to_sql_agent/services/schema_normalization.py` with `normalize_raw_schema()` and `build_snapshot_id()`.
+  - Converts `RawIntrospectionResult` into canonical `DatabaseSchema`.
+  - Generates stable, filesystem-friendly snapshot IDs from `database_id` and `introspected_at`.
+  - Normalizes table types such as `BASE TABLE` to `TABLE`.
+  - Normalizes common PostgreSQL and SQLite data-type aliases into stable canonical types.
+  - Resolves primary key ordering from column metadata and marks foreign-key columns from table relationships.
+  - Deduplicates repeated foreign-key relationships before building canonical schema entries.
+- Added `src/text_to_sql_agent/services/__init__.py` to export service-layer normalization helpers.
+- Added 8 tests in `tests/text_to_sql_agent/services/test_schema_normalization.py` covering snapshot IDs, explicit snapshot override, table metadata mapping, PK/FK resolution, foreign-key deduplication, PostgreSQL type normalization, SQLite affinity normalization, and timestamp/version preservation.
+- All 8 normalization tests pass.
+
+### T-2026-05-15-027 - Implement introspection provider factory and registry
+
+- Created `src/text_to_sql_agent/repositories/provider_factory.py` with a registry of supported introspection providers.
+  - Added `PROVIDER_REGISTRY` mapping normalized dialect keys to provider classes.
+  - Added `normalize_dialect()` to resolve aliases such as `postgres` -> `postgresql` and `sqlite3` -> `sqlite`.
+  - Added `get_introspection_provider()` to return a fresh provider instance for the requested dialect.
+  - Raises a helpful `ValueError` that includes supported dialects for unknown inputs.
+- Updated `src/text_to_sql_agent/repositories/__init__.py` to export the factory, registry, and normalization helper.
+- Added 11 tests in `tests/text_to_sql_agent/repositories/test_provider_factory.py` covering registry contents, alias normalization, case-insensitive lookup, fresh instance creation, and unsupported dialect errors.
+- All 11 factory tests pass; total repository tests now 55.
+
+### T-2026-05-15-026 - Implement PostgreSQL schema introspection adapter
+
+- Created `src/text_to_sql_agent/repositories/postgresql_provider.py` with concrete `PostgresIntrospectionProvider` class.
+  - Implements `introspect(database_id, connection_config)` for PostgreSQL databases.
+  - Reads tables and views from `information_schema.tables` with system schema filtering.
+  - Reads column metadata via `information_schema.columns` with nullability, defaults, numeric/character constraints.
+  - Extracts primary and unique constraints via `key_column_usage` + `table_constraints`.
+  - Reads foreign keys via multi-table join with cascade rule extraction.
+  - Reads indexes from `pg_indexes` with uniqueness detection and column name parsing.
+- Updated `src/text_to_sql_agent/repositories/__init__.py` to export `PostgresIntrospectionProvider`.
+- Added `psycopg2-binary==2.9.12` to project dependencies.
+- Created 17 comprehensive tests covering connection validation, error handling, schema discovery, constraint extraction, and connection cleanup.
+- All 17 tests pass; total repository tests now 44 after this task.
+
+### T-2026-05-15-025 - Implement SQLite schema introspection adapter
+
+- Created `src/text_to_sql_agent/repositories/sqlite_provider.py` with concrete `SQLiteIntrospectionProvider` class.
+  - Implements `introspect(database_id, connection_config)` for SQLite databases.
+  - Reads tables and views from `sqlite_master`.
+  - Reads column metadata via `PRAGMA table_info` with proper nullability handling (PK columns implicitly NOT NULL).
+  - Reads foreign keys via `PRAGMA foreign_key_list` with ON DELETE/UPDATE rules.
+  - Reads indexes via `PRAGMA index_list` and `PRAGMA index_info`.
+  - Handles default values and data types.
+- Updated `src/text_to_sql_agent/repositories/__init__.py` to export `SQLiteIntrospectionProvider`.
+- Added 14 tests in `tests/text_to_sql_agent/repositories/test_sqlite_provider.py` covering basic introspection, table discovery, column nullability, primary keys, foreign keys, indexes, default values, error handling (missing path, invalid path), in-memory databases, multiple databases, timestamp recording, and empty database handling.
+- All 14 tests pass.
+
+### T-2026-05-15-024 - Define abstract schema introspection provider interface
+
+- Created `src/text_to_sql_agent/repositories/introspection_provider.py` with abstract base class `SchemaIntrospectionProvider`.
+  - Single abstract method: `introspect(database_id, connection_config) -> RawIntrospectionResult`.
+  - Comprehensive docstring with expected connection_config keys (host, port, database, username, password, extra_params).
+  - Defines contract for all dialect-specific introspection implementations.
+- Created `src/text_to_sql_agent/repositories/__init__.py` exporting `SchemaIntrospectionProvider`.
+- Added 12 tests in `tests/text_to_sql_agent/repositories/test_introspection_provider.py` covering abstract class instantiation errors, concrete implementations, validation logic, return type checking, and multi-provider independence.
+- All 12 tests pass.
+
+### T-2026-05-15-023 - Define SchemaReadState TypedDict for LangGraph
+
+- Created `src/text_to_sql_agent/graphs/state.py` with `SchemaReadState` as a `TypedDict` with `Annotated` fields for LangGraph workflow.
+  - State tracks identity (request_id, database_id, dialect), request params (refresh_mode, target_tables, force_refresh), runtime context (connection_config_ref), step outputs (references only: introspection_result, snapshot_id, document_ids, embedding_ids), control flow (status, current_node, retry_count), and observability (errors, warnings, timestamps).
+  - Uses `Annotated[list[str], add_messages]` for error and warning lists to enable LangGraph message reducers.
+- Created `src/text_to_sql_agent/graphs/__init__.py` exporting `SchemaReadState`.
+- Added 18 tests in `tests/text_to_sql_agent/graphs/test_state.py` covering TypedDict structure, state initialization, partial updates, status transitions, error/warning accumulation, refresh modes, target tables filtering, connection config references, timestamp tracking, and full workflow simulations (success and failure paths).
+- All 18 tests pass.
+
+### T-2026-05-15-022 - Define lifecycle and operational Pydantic models
+
+- Created `src/text_to_sql_agent/models/lifecycle.py` with two Pydantic `BaseModel` classes: `SchemaSnapshotRef`, `SchemaRefreshRequest`.
+  - `SchemaSnapshotRef` tracks the lifecycle of a saved schema snapshot: snapshot_id, database_id, dialect, created_at, table_count, status (fresh, stale, indexing, indexed, failed).
+  - `SchemaRefreshRequest` specifies schema refresh parameters: database_id, refresh_mode (full, incremental, metadata_only), optional target_tables, and force flag.
+- Updated `src/text_to_sql_agent/models/__init__.py` to export both new models.
+- Added 17 tests in `tests/text_to_sql_agent/models/test_lifecycle.py` covering required fields, optional defaults, edge cases (zero tables, 10k tables, empty/many target tables), status values, refresh modes, None vs empty list distinction, serialization roundtrip, and request-snapshot workflow consistency.
+- All 17 tests pass.
+
+### T-2026-05-15-021 - Define document and embedding Pydantic models
+
+- Created `src/text_to_sql_agent/models/document.py` with two Pydantic `BaseModel` classes: `SchemaDocument`, `SchemaEmbeddingRecord`.
+  - `SchemaDocument` represents a semantic document chunk for vector indexing with granularity (table, column_group, relationship), human-readable content, domain tags, and metadata.
+  - `SchemaEmbeddingRecord` represents a computed embedding vector linked to a document and snapshot.
+- Updated `src/text_to_sql_agent/models/__init__.py` to export both new models.
+- Added 13 tests in `tests/text_to_sql_agent/models/test_document.py` covering required fields, optional defaults, validation errors, edge cases (empty vectors, zero vectors, large vectors), serialization roundtrip, datetime precision, and document-embedding pair consistency.
+- All 13 tests pass.
+
+### T-2026-05-15-020 - Define canonical schema Pydantic models
+
+- Created `src/text_to_sql_agent/models/schema.py` with four Pydantic `BaseModel` classes: `ForeignKeySchema`, `ColumnSchema`, `TableSchema`, `DatabaseSchema`.
+- Updated `src/text_to_sql_agent/models/__init__.py` to export all four canonical models alongside existing raw introspection models.
+- Added 12 tests in `tests/text_to_sql_agent/models/test_schema.py` covering required fields, optional defaults, missing-field validation errors, nested composition, and serialization roundtrip.
+- All 12 tests pass.
+
+### T-2026-05-15-019 - Define raw introspection Pydantic models
+
+- Created `src/text_to_sql_agent/models/introspection.py` with five Pydantic `BaseModel` classes: `RawColumnMeta`, `RawForeignKeyMeta`, `RawIndexMeta`, `RawTableMeta`, `RawIntrospectionResult`.
+- Created `src/text_to_sql_agent/models/__init__.py` exporting all five models.
+- Added 13 tests in `tests/text_to_sql_agent/models/test_introspection.py` covering required fields, optional defaults, missing-field validation errors, and serialization roundtrip via `model_dump` / `model_validate`.
+- All 13 tests pass.
 
 ### T-2026-05-15-018 - Point test SQLite settings to repository database
 

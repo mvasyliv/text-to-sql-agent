@@ -4,7 +4,98 @@ All notable changes to this project will be documented in this file.
 
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
+## 2026-05-18
+
+### Changed
+
+- Started T-2026-05-18-037 secret placeholder resolution implementation:
+  - Added `src/text_to_sql_agent/config/secrets.py` with `resolve_secret_placeholders()` for `[LOAD_FROM_SECRETS]` handling.
+  - Added `FileSecretsProvider` and `AwsSecretsManagerProvider` scaffolding for local/test and production backends.
+  - Added `tests/text_to_sql_agent/config/test_secrets.py` covering source precedence, production fail-fast, and local warning behavior.
+
+- Refactored `main_terminal.py` (T-2026-05-18-036):
+  - Replaced raw `sqlite3` introspection with `SQLiteIntrospectionProvider` + `normalize_raw_schema` from the established repository/service layers.
+  - Database path now sourced from `SQLITE_PATH` env var instead of being hardcoded.
+  - Read-only SQL enforcement: `query_database()` rejects non-SELECT inputs before any database access.
+  - `get_db_schema()` accepts an optional table-name filter; terminal supports `schema [<table>…]` for targeted schema inspection.
+  - Migrated terminal agent execution to `langgraph.prebuilt.create_react_agent` (LangChain v1 compatible), replacing the removed `AgentExecutor` import path.
+  - Added OpenAI key env aliases (`OPENAI_API_KEY`, `OPENAI_KEY`, `OPENAI_TOKEN`) for terminal startup compatibility.
+  - Added natural-language schema shortcuts (`view full database schema`, `show schema for ...`) that do not require LLM credentials.
+  - Agent executor lazily initialised on first natural-language query so schema commands work without `OPENAI_API_KEY`.
+  - Loguru integrated at WARNING level on stderr.
+  - Removed `show_graph` stub tool and `graph` terminal shortcut.
+
+### Added
+
+- Thin schema reader agent entrypoint in `src/text_to_sql_agent/agents/schema_reader_agent.py`:
+  - Converts `SchemaRefreshRequest` objects into initial `SchemaReadState` payloads.
+  - Invokes the compiled schema ingestion graph with explicit `connection_config_ref` wiring.
+  - Supports explicit request ID overrides for callers that already have request correlation data.
+- Agent tests in `tests/text_to_sql_agent/agents/test_agents_scaffold.py`:
+  - Covers state construction, graph invocation, and request ID override behavior.
+- Updated `src/text_to_sql_agent/agents/__init__.py` to export the agent entrypoint helpers.
+
+- Compiled LangGraph schema ingestion workflow in `src/text_to_sql_agent/graphs/schema_graph.py`:
+  - Wires the schema ingestion nodes into a `StateGraph` with explicit retry, failure, and completion transitions.
+  - Supports dependency injection for connection resolution, introspection providers, snapshot persistence, vector storage, and embedding generation.
+  - Complements the existing node functions with terminal success and failure states that set workflow completion timestamps.
+- Graph workflow tests in `tests/text_to_sql_agent/graphs/test_graphs_scaffold.py`:
+  - Covers the full happy path, a transient retry path, and the exhausted-retry failure path.
+- Updated `src/text_to_sql_agent/graphs/__init__.py` to export the compiled graph builder.
+
 ## 2026-05-15
+
+### Added
+
+- LangGraph schema ingestion node functions in `src/text_to_sql_agent/graphs/schema_nodes.py`:
+  - Connection context loading, provider-based introspection, schema normalization, document building, snapshot persistence, and embedding indexing.
+  - Added `normalized_schema` to `SchemaReadState` as the canonical intermediate schema payload.
+- Schema indexing service in `src/text_to_sql_agent/services/schema_indexing.py`:
+  - `index_schema_embeddings()` turns semantic schema documents into embedding records and persists them through a vector store repository.
+  - Uses an injected embedder callable and stable default embedding ID generation.
+  - Handles empty document lists without writing any records.
+- Abstract vector store repository interface in `src/text_to_sql_agent/repositories/vector_store_repository.py`:
+  - `VectorStoreRepository` defines the storage and retrieval contract for embedded schema records.
+  - Includes upsert, similarity search, and snapshot-scoped deletion operations.
+- Schema document building service in `src/text_to_sql_agent/services/schema_document_builder.py`:
+  - `build_schema_documents()` converts canonical database schemas into semantic documents.
+  - Generates table, column-group, and relationship documents with deterministic IDs and readable content.
+  - Preserves domain tags and metadata while ordering columns by ordinal position.
+- Schema snapshot repository in `src/text_to_sql_agent/repositories/schema_snapshot_repository.py`:
+  - `SchemaSnapshotRepository` persists canonical schema snapshots as JSON files.
+  - Supports save, load, list, and delete operations with `SchemaSnapshotRef` metadata.
+  - Creates the storage directory automatically on initialization.
+- Schema normalization service in `src/text_to_sql_agent/services/schema_normalization.py`:
+  - `normalize_raw_schema()` converts raw introspection output into canonical `DatabaseSchema`.
+  - Generates stable snapshot IDs, normalizes table kinds and data types, resolves PK/FK flags, and deduplicates foreign keys.
+- Introspection provider factory and registry in `src/text_to_sql_agent/repositories/provider_factory.py`:
+  - `PROVIDER_REGISTRY` maps supported dialects to provider classes.
+  - `normalize_dialect()` resolves aliases and casing for dialect lookup.
+  - `get_introspection_provider()` returns the matching provider instance or raises for unsupported dialects.
+- PostgreSQL schema introspection provider in `src/text_to_sql_agent/repositories/postgresql_provider.py`:
+  - `PostgresIntrospectionProvider`: concrete implementation using `information_schema` and `pg_catalog`.
+  - System schema exclusion, primary/unique/foreign key extraction, index parsing.
+  - Added `psycopg2-binary` dependency for PostgreSQL connectivity.
+- SQLite schema introspection provider in `src/text_to_sql_agent/repositories/sqlite_provider.py`:
+  - `SQLiteIntrospectionProvider`: concrete implementation reading schema via sqlite_master, PRAGMA queries.
+  - Handles tables, views, columns (with proper PK nullability), foreign keys (with cascade rules), indexes, and default values.
+  - Supports in-memory databases (":memory:") and file-based databases.
+- Abstract schema introspection provider interface in `src/text_to_sql_agent/repositories/introspection_provider.py`:
+  - `SchemaIntrospectionProvider`: abstract base class defining the contract for dialect-specific schema readers.
+  - Single method: `introspect(database_id, connection_config) -> RawIntrospectionResult`.
+  - Serves as foundation for PostgreSQL, MySQL, SQLite, MSSQL, and other dialect adapters.
+- LangGraph state definition in `src/text_to_sql_agent/graphs/state.py`:
+  - `SchemaReadState`: TypedDict for schema ingestion workflow state management. Tracks request identity, parameters, runtime context, step outputs (as references), control flow, and observability.
+  - Uses `Annotated[list[str], add_messages]` for error and warning lists to support LangGraph message reducers.
+- Lifecycle and operational Pydantic models in `src/text_to_sql_agent/models/lifecycle.py`:
+  - `SchemaSnapshotRef`: tracks schema snapshot lifecycle with status (fresh, stale, indexing, indexed, failed).
+  - `SchemaRefreshRequest`: specifies schema refresh scope with refresh modes (full, incremental, metadata_only) and optional table targeting.
+- Document and embedding Pydantic models in `src/text_to_sql_agent/models/document.py`:
+  - `SchemaDocument`: represents a semantic document chunk with granularity (table, column_group, relationship), human-readable content for embedding, domain tags, and metadata.
+  - `SchemaEmbeddingRecord`: represents a computed embedding vector linked to a document, database, and snapshot.
+- Canonical schema Pydantic models: `ForeignKeySchema`, `ColumnSchema`, `TableSchema`, `DatabaseSchema` in `src/text_to_sql_agent/models/schema.py`. These are the normalized internal contract used across all layers.
+- Raw introspection Pydantic models: `RawColumnMeta`, `RawForeignKeyMeta`, `RawIndexMeta`, `RawTableMeta`, `RawIntrospectionResult` in `src/text_to_sql_agent/models/introspection.py`. These are the vendor-specific metadata shapes before normalization.
+- `src/text_to_sql_agent/models/__init__.py` package init exporting all raw introspection models.
 
 ### Changed
 
