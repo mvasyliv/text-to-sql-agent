@@ -16,21 +16,19 @@ from langgraph.constants import END, START
 from langgraph.graph import StateGraph
 from langgraph.types import interrupt
 
+from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.graphs.query_state import QueryState
+
+# Schema context node is built with a default connection config.
+# Override by passing a custom node to build_query_graph().
+_DEFAULT_CONNECTION_CONFIG: dict = {}
+
+node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)
 
 
 # ---------------------------------------------------------------------------
 # Node implementations (stubs — replaced by real agents in later tasks)
 # ---------------------------------------------------------------------------
-
-
-def node_schema_context(state: QueryState) -> dict:
-    """Fetch and format schema context for the target database."""
-    return {
-        "schema_context": f"[schema context for {state['database_id']}]",
-        "status": "validating",
-        "log_messages": ["schema_context: schema context prepared (stub)"],
-    }
 
 
 def node_sql_generator(state: QueryState) -> dict:
@@ -181,12 +179,15 @@ def _route_after_execution(state: QueryState) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_query_graph(checkpointer=None):
+def build_query_graph(checkpointer=None, connection_config: dict | None = None):
     """Compile and return the DB query orchestration graph.
 
     Args:
         checkpointer: Optional LangGraph checkpointer for persistence.
                       Defaults to in-memory MemorySaver when None.
+        connection_config: Optional connection parameters forwarded to the
+                           schema context node (e.g. {"path": "/data/db.sqlite"}).
+                           When None, the default empty-config stub is used.
 
     Returns:
         A compiled LangGraph CompiledGraph ready for invocation.
@@ -194,10 +195,16 @@ def build_query_graph(checkpointer=None):
     if checkpointer is None:
         checkpointer = MemorySaver()
 
+    schema_node = (
+        build_schema_context_node(connection_config)
+        if connection_config is not None
+        else node_schema_context
+    )
+
     builder = StateGraph(QueryState)
 
     # Nodes
-    builder.add_node("schema_context", node_schema_context)
+    builder.add_node("schema_context", schema_node)
     builder.add_node("sql_generator", node_sql_generator)
     builder.add_node("syntax_validator", node_syntax_validator)
     builder.add_node("security_guard", node_security_guard)

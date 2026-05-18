@@ -8,6 +8,13 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added schema context agent (T-2026-05-18-042):
+  - New `src/text_to_sql_agent/agents/schema_context_agent.py` with `format_schema_context`, `build_schema_context`, and `build_schema_context_node`.
+  - Schema formatted as compact text block: `-- Database: id (dialect)` header, `TABLE name / col type [PK/FK/NOT NULL]` body, with optional per-table filtering and stopword/punctuation normalization.
+  - `build_schema_context_node(connection_config)` is a LangGraph adapter — returns a node function that populates `schema_context` and handles errors gracefully.
+  - `build_query_graph()` extended with optional `connection_config` parameter so callers can inject real DB credentials without affecting test-time defaults.
+  - Stub `node_schema_context` in `query_graph.py` replaced with the real agent; existing graph tests unaffected via default empty-config path.
+
 - Added DB query orchestration graph (T-2026-05-18-041):
   - New `QueryState` TypedDict in `src/text_to_sql_agent/graphs/query_state.py` tracking all query pipeline fields.
   - New `build_query_graph()` in `src/text_to_sql_agent/graphs/query_graph.py` with stub nodes for schema context, SQL generation, syntax validation, security guard, human approval (LangGraph interrupt), MCP execution, analytics, and export.

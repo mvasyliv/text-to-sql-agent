@@ -9,6 +9,20 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-042 - Implement schema context agent
+
+- Created `src/text_to_sql_agent/agents/schema_context_agent.py`:
+  - `format_schema_context(schema, table_filter)` — formats `DatabaseSchema` into a compact multi-line text block with `-- Database: id (dialect)` header and `TABLE / col type [PK/FK/NOT NULL]` body. Optional `table_filter` restricts output; stopwords and punctuation stripped automatically.
+  - `build_schema_context(database_id, connection_config, dialect, table_filter)` — calls `get_introspection_provider`, introspects, normalizes via `normalize_raw_schema`, and formats.
+  - `build_schema_context_node(connection_config)` — returns a LangGraph-compatible node function `(state: dict) -> dict` that populates `schema_context`, `status`, and `log_messages` on success, or `status=failed` / `error_message` on any exception.
+- Updated `src/text_to_sql_agent/agents/__init__.py`: exported `build_schema_context`, `build_schema_context_node`, `format_schema_context`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced stub `node_schema_context` function with module-level `node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)`.
+  - Extended `build_query_graph(checkpointer, connection_config)` signature so callers can inject real connection parameters; when `connection_config` is provided a fresh node is built, otherwise the default empty-config stub is used (safe for tests).
+- Tests: 13 passed — `TestFormatSchemaContext` (10 cases), `TestBuildSchemaContext` (1 case, mocked provider), `TestBuildSchemaContextNode` (2 cases: success and failure).
+- Existing `test_query_graph.py` 12 tests still pass (default stub path, no real DB required).
+- Validation: `ruff check` passes for all modified files.
+
 ### T-2026-05-18-041 - Implement orchestration graph for DB agents
 
 - Designed `QueryState` TypedDict (`graphs/query_state.py`) with fields for:
