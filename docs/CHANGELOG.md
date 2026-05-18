@@ -8,6 +8,15 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Hardened schema shortcut parsing in `main_terminal.py` (T-2026-05-18-039):
+  - `show/view schema for ...` now ignores filler words like `table`, `tables`, `for`, and `and`.
+  - Trailing punctuation is stripped before schema lookup, so inputs like `view schema for table optins?` resolve correctly.
+
+- Fixed terminal agent runtime compatibility in `main_terminal.py` (T-2026-05-18-038):
+  - Migrated from deprecated `langgraph.prebuilt.create_react_agent` usage to `langchain.agents.create_agent`.
+  - Replaced legacy `Tool` definitions with `StructuredTool` to align with current tool-call argument schema.
+  - Added schema tool input adapter to support optional table filters and prevent `single-input tool` invocation errors.
+
 - Started T-2026-05-18-037 secret placeholder resolution implementation:
   - Added `src/text_to_sql_agent/config/secrets.py` with `resolve_secret_placeholders()` for `[LOAD_FROM_SECRETS]` handling.
   - Added `FileSecretsProvider` and `AwsSecretsManagerProvider` scaffolding for local/test and production backends.

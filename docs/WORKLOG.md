@@ -9,6 +9,35 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-039 - Harden schema shortcut parsing
+
+- Investigated why `view schema for table optins?` was being interpreted as `table, optins?`.
+- Root cause analysis:
+  - The manual schema shortcut branch in `main_terminal.py` split the suffix literally and kept filler words and punctuation.
+  - That caused exact-name lookup to fail even though `optins` exists.
+- Implemented fix:
+  - Added `_extract_schema_table_names()` to drop filler words such as `table`, `tables`, `for`, `the`, and `and`.
+  - Stripped trailing punctuation before calling `get_db_schema()`.
+- Validation:
+  - Smoke checks now parse `table optins?` as `['optins']`.
+  - `ruff check main_terminal.py` passes.
+
+### T-2026-05-18-038 - Fix terminal agent tool invocation and deprecation path
+
+- Reproduced terminal runtime issue in `main_terminal.py`:
+  - Deprecation warning from `langgraph.prebuilt.create_react_agent` migration path.
+  - Runtime failure: `Too many arguments to single-input tool get_schema`.
+- Root cause analysis:
+  - Agent constructor path was using a deprecated import for the installed LangChain/LangGraph version.
+  - `get_schema` was defined as legacy single-input `Tool`, which conflicted with agent tool-call argument shape.
+- Implemented fix:
+  - Migrated agent construction to `langchain.agents.create_agent`.
+  - Replaced `Tool` with `StructuredTool` definitions for both `get_schema` and `execute_query`.
+  - Added `_get_schema_tool_input(table_names: str = "")` adapter to support optional table filtering without argument-shape errors.
+- Validation:
+  - `ruff check main_terminal.py` passes.
+  - Module import and schema-tool invocation smoke checks pass.
+
 ### T-2026-05-18-037 - Implement secret placeholder resolution for environment config
 
 - Identified placeholder-based secret markers (`[LOAD_FROM_SECRETS]`) in production environment configuration.

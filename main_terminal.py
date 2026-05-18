@@ -4,10 +4,10 @@ import json
 import os
 import sys
 
-from langchain_core.tools import Tool
+from langchain.agents import create_agent
+from langchain_core.tools import StructuredTool
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from langgraph.prebuilt import create_react_agent
 
 from text_to_sql_agent.config import load_runtime_environment
 from text_to_sql_agent.models import DatabaseSchema, TableSchema
@@ -74,8 +74,30 @@ def get_db_schema(table_filter: list[str] | None = None) -> str:
         return f"Error retrieving schema: {exc}"
 
 
-def _get_full_schema_for_tool(_: str = "") -> str:
-    return get_db_schema()
+def _get_schema_tool_input(table_names: str = "") -> str:
+    """Tool adapter for schema retrieval with optional table filters."""
+    raw = table_names.strip()
+    if not raw:
+        return get_db_schema()
+    names = [item for item in raw.replace(",", " ").split() if item]
+    return get_db_schema(names or None)
+
+
+_SCHEMA_COMMAND_STOPWORDS = {"table", "tables", "the", "for", "of", "a", "an", "and"}
+
+
+def _extract_schema_table_names(text: str) -> list[str]:
+    """Extract table names from a schema shortcut while skipping filler words."""
+    cleaned = text.strip().replace(",", " ")
+    names: list[str] = []
+    for token in cleaned.split():
+        candidate = token.strip("?.!,:;()[]{}\"'")
+        if not candidate:
+            continue
+        if candidate.lower() in _SCHEMA_COMMAND_STOPWORDS:
+            continue
+        names.append(candidate)
+    return names
 
 
 # --------------------------------------------------------------------------- #
@@ -114,12 +136,15 @@ def query_database(sql_query: str) -> str:
 # --------------------------------------------------------------------------- #
 
 tools = [
-    Tool(
+    StructuredTool.from_function(
         name="get_schema",
-        func=_get_full_schema_for_tool,
-        description="Get the full database schema with all tables and columns.",
+        func=_get_schema_tool_input,
+        description=(
+            "Get database schema. Optional input is a space- or comma-separated "
+            "list of table names (for example: 'users orders')."
+        ),
     ),
-    Tool(
+    StructuredTool.from_function(
         name="execute_query",
         func=query_database,
         description=(
@@ -146,7 +171,7 @@ Keep responses concise and factual."""
 
 def _resolve_openai_api_key() -> str | None:
     """Resolve OpenAI API key from supported env variable aliases."""
-    for key_name in ("OPENAI_API_KEY", "OPENAI_KEY", "OPENAI_TOKEN"):
+    for key_name in ("OPENAI_API_KEY", "OPENAI_KEY", "OPENAI_TOKEN", "LLM_API_KEY"):
         raw_value = os.getenv(key_name)
         if not raw_value:
             continue
@@ -160,7 +185,7 @@ def _build_agent(model: str = "gpt-4"):
     api_key = _resolve_openai_api_key()
     if not api_key:
         raise RuntimeError(
-            "OpenAI API key is missing. Set OPENAI_API_KEY (or OPENAI_KEY / OPENAI_TOKEN) "
+            "OpenAI API key is missing. Set OPENAI_API_KEY (or OPENAI_KEY / OPENAI_TOKEN / LLM_API_KEY) "
             "in your shell or .env file."
         )
     llm = ChatOpenAI(
@@ -168,8 +193,11 @@ def _build_agent(model: str = "gpt-4"):
         model=os.getenv("OPENAI_MODEL", model),
         temperature=0,
     )
-    return create_react_agent(llm, tools, prompt=_PROMPT_TEMPLATE)
-
+    return create_agent(
+        model=llm,
+        tools=tools,
+        system_prompt=_PROMPT_TEMPLATE,
+    )
 
 # --------------------------------------------------------------------------- #
 # Main terminal loop                                                           #
@@ -233,7 +261,7 @@ def main() -> None:
             continue
         if raw_lower.startswith("show schema for ") or raw_lower.startswith("view schema for "):
             prefix = "show schema for " if raw_lower.startswith("show schema for ") else "view schema for "
-            names = raw[len(prefix):].replace(",", " ").split()
+            names = _extract_schema_table_names(raw[len(prefix):])
             print()
             print(get_db_schema(names))
             continue
