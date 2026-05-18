@@ -8,6 +8,7 @@ from .schema_snapshot_repository import SchemaSnapshotRepository
 from .vector_store_repository import VectorStoreRepository
 from .sqlite_provider import SQLiteIntrospectionProvider
 from .postgresql_provider import PostgresIntrospectionProvider
+from .session_repository import InMemorySessionRepository, SessionRepository
 
 __all__ = [
     "SchemaIntrospectionProvider",
@@ -18,4 +19,6 @@ __all__ = [
     "VectorStoreRepository",
     "SQLiteIntrospectionProvider",
     "PostgresIntrospectionProvider",
+    "InMemorySessionRepository",
+    "SessionRepository",
 ]

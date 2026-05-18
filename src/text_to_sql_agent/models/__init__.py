@@ -23,6 +23,12 @@ from .schema import (
     ForeignKeySchema,
     TableSchema,
 )
+from .session import (
+    ChatMessage,
+    Conversation,
+    MessageRole,
+    User,
+)
 
 __all__ = [
     "ColumnSchema",
@@ -38,4 +44,8 @@ __all__ = [
     "SchemaRefreshRequest",
     "SchemaSnapshotRef",
     "TableSchema",
+    "ChatMessage",
+    "Conversation",
+    "MessageRole",
+    "User",
 ]

@@ -9,6 +9,20 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-040 - Add user identity and conversation history foundation
+
+- Defined scope: stable user identifier, per-user conversation isolation, ordered message history, future-ready for persistent backend.
+- Delivered `src/text_to_sql_agent/models/session.py`:
+  - `User` — stable `user_id`, `display_name`, optional `email`, `is_active`, UTC `created_at`.
+  - `Conversation` — `conversation_id`, `user_id`, optional `title`, UTC timestamps, `metadata` dict for db/dialect context.
+  - `ChatMessage` — `message_id`, `conversation_id`, `MessageRole` enum (user/assistant/system/tool), `content`, UTC `created_at`, `metadata` for SQL/approval context.
+- Delivered `src/text_to_sql_agent/repositories/session_repository.py`:
+  - Abstract `SessionRepository` with `save_user`, `get_user`, `save_conversation`, `get_conversation`, `list_conversations`, `append_message`, `list_messages`.
+  - `InMemorySessionRepository`: volatile in-memory implementation for development and tests; designed for drop-in replacement with a DB-backed implementation.
+- Exported all new symbols from `models/__init__.py` and `repositories/__init__.py`.
+- Tests: 17 model tests + 11 repository tests = 28 passed, 0 failed.
+- Validation: `ruff check` passes for both new files.
+
 ### T-2026-05-18-039 - Harden schema shortcut parsing
 
 - Investigated why `view schema for table optins?` was being interpreted as `table, optins?`.

@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added user identity and conversation history foundation (T-2026-05-18-040):
+  - New `User`, `Conversation`, `ChatMessage`, `MessageRole` Pydantic models in `src/text_to_sql_agent/models/session.py`.
+  - New `SessionRepository` abstract contract and `InMemorySessionRepository` in `src/text_to_sql_agent/repositories/session_repository.py`.
+  - Each user gets a stable `user_id`; each conversation is scoped to a user; messages carry role, content, and metadata for SQL/approval context.
+  - In-memory implementation is designed for drop-in replacement with a persistent backend (PostgreSQL/SQLite).
+
 - Hardened schema shortcut parsing in `main_terminal.py` (T-2026-05-18-039):
   - `show/view schema for ...` now ignores filler words like `table`, `tables`, `for`, and `and`.
   - Trailing punctuation is stripped before schema lookup, so inputs like `view schema for table optins?` resolve correctly.
