@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added DB query orchestration graph (T-2026-05-18-041):
+  - New `QueryState` TypedDict in `src/text_to_sql_agent/graphs/query_state.py` tracking all query pipeline fields.
+  - New `build_query_graph()` in `src/text_to_sql_agent/graphs/query_graph.py` with stub nodes for schema context, SQL generation, syntax validation, security guard, human approval (LangGraph interrupt), MCP execution, analytics, and export.
+  - Human approval gate uses `interrupt()` — graph pauses and waits for explicit approve/reject/edit before executing SQL.
+  - Routing nodes enforce fail-fast on invalid syntax, blocked SQL, or user rejection.
+
 - Added user identity and conversation history foundation (T-2026-05-18-040):
   - New `User`, `Conversation`, `ChatMessage`, `MessageRole` Pydantic models in `src/text_to_sql_agent/models/session.py`.
   - New `SessionRepository` abstract contract and `InMemorySessionRepository` in `src/text_to_sql_agent/repositories/session_repository.py`.

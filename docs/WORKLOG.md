@@ -9,7 +9,23 @@ Rules:
 
 ## 2026-05-18
 
-### T-2026-05-18-040 - Add user identity and conversation history foundation
+### T-2026-05-18-041 - Implement orchestration graph for DB agents
+
+- Designed `QueryState` TypedDict (`graphs/query_state.py`) with fields for:
+  - Session context: `user_id`, `conversation_id`, `message_id`.
+  - Input: `user_question`, `database_id`, `dialect`.
+  - Each pipeline step: schema context, generated SQL, syntax/security results, human approval, execution result, analytics chart, export path, insight text.
+  - Control flow (`status`) and observability (`log_messages` with LangGraph append reducer).
+- Built `build_query_graph()` (`graphs/query_graph.py`) with stub nodes for all steps:
+  - `schema_context` → `sql_generator` → `syntax_validator` → `security_guard` → `human_approval` (interrupt) → `query_executor` → `analytics` → `export` → `done`.
+  - `failed` terminal node reachable from syntax, security, approval, and execution failures.
+  - Conditional routing after each validation/decision node.
+  - `interrupt_before=["human_approval"]` ensures the graph pauses for explicit user confirmation before any SQL execution.
+  - Checkpointer defaults to `MemorySaver` for development; injectable for production.
+- Exported `QueryState` and `build_query_graph` from `graphs/__init__.py`.
+- Tests: 12 passed — node unit tests (syntax validator, security guard) and graph integration tests (happy path, approve, reject, edit, log accumulation).
+- Validation: `ruff check` passes for both new files.
+
 
 - Defined scope: stable user identifier, per-user conversation isolation, ordered message history, future-ready for persistent backend.
 - Delivered `src/text_to_sql_agent/models/session.py`:
