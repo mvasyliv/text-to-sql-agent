@@ -13,6 +13,7 @@ wheels/
 .env
 .env.prod
 .env.local
+.secrets.local.json
 
 # Local data
 data/

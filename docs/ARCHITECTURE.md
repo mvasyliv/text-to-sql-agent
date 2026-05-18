@@ -64,6 +64,11 @@ Expected responsibilities:
 
 If LangGraph is used as intended, this layer should become the main execution spine of the application.
 
+Current schema ingestion node sequence is:
+`load_connection_context` -> `introspect_schema` -> `normalize_schema` -> `build_schema_documents` -> `persist_schema_snapshot` -> `index_schema_embeddings`.
+
+The graph state currently carries a canonical `normalized_schema` intermediate so the persistence and indexing nodes can share a single normalized view of the database.
+
 ### Services Layer
 
 `src/text_to_sql_agent/services/`
@@ -173,6 +178,8 @@ Prompt utilities build the model input from the user request, schema context, an
 
 4. Planning or orchestration
 A graph or agent decides which step runs next, such as clarification, schema lookup, SQL drafting, validation, or execution.
+
+For schema ingestion specifically, the graph should materialize the normalized schema once, then reuse it for snapshot persistence and document/embedding generation.
 
 5. SQL generation
 The model produces a candidate SQL statement or structured intermediate representation.
