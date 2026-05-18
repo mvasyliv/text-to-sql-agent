@@ -18,12 +18,13 @@ Rules:
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
-| T-2026-05-18-037 | 2026-05-18 | Implement secret placeholder resolution for environment config | in_progress | Implement placeholder resolution for `[LOAD_FROM_SECRETS]` with source priority (process env -> secrets backend -> env files), AWS Secrets Manager backend for production, file-based backend for local/testing, and explicit fail-fast/warn behavior by environment. | `.env.prod`, `.env.test`, `src/text_to_sql_agent/config/`, `tests/text_to_sql_agent/config/`, `docs/TASKS.md`, `docs/WORKLOG.md` |
+| _No open tasks_ | - | - | - | - | - |
 
 ## COMPLETED
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-05-18-037 | 2026-05-18 | Implement secret placeholder resolution for environment config | done | Integrated runtime settings loading with `[LOAD_FROM_SECRETS]` resolution, source-priority merging (process env -> secrets backend -> env files), file/AWS secret providers, and environment-specific fail-fast policy; added resolver and runtime loader tests. | `src/text_to_sql_agent/config/secrets.py`, `src/text_to_sql_agent/config/settings.py`, `src/text_to_sql_agent/config/__init__.py`, `tests/text_to_sql_agent/config/test_secrets.py`, `tests/text_to_sql_agent/config/test_settings_runtime.py`, `main_terminal.py`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-05-18-036 | 2026-05-18 | Refactor terminal prototype into project architecture | done | Rewrote `main_terminal.py` to use `SQLiteIntrospectionProvider`, `normalize_raw_schema`, env-based DB path, read-only SQL enforcement, loguru logging, and lazy agent init. Added `schema [<table>…]` command for targeted table inspection. | `main_terminal.py`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-05-15-035 | 2026-05-18 | Implement SchemaReaderAgent entrypoint | done | Added a thin `SchemaReaderAgent` wrapper that builds initial `SchemaReadState` from `SchemaRefreshRequest` and invokes the schema ingestion graph. | `src/text_to_sql_agent/agents/`, `tests/text_to_sql_agent/agents/`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-05-15-034 | 2026-05-18 | Assemble LangGraph schema ingestion graph and edges | done | Wired the schema ingestion nodes into a compiled `StateGraph` with conditional retry, failure, and completion transitions. | `src/text_to_sql_agent/graphs/`, `tests/text_to_sql_agent/graphs/`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |

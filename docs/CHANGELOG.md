@@ -12,6 +12,8 @@ The format is intentionally simple and uses dated sections until versioned relea
   - Added `src/text_to_sql_agent/config/secrets.py` with `resolve_secret_placeholders()` for `[LOAD_FROM_SECRETS]` handling.
   - Added `FileSecretsProvider` and `AwsSecretsManagerProvider` scaffolding for local/test and production backends.
   - Added `tests/text_to_sql_agent/config/test_secrets.py` covering source precedence, production fail-fast, and local warning behavior.
+  - Added `src/text_to_sql_agent/config/settings.py` and integrated `load_runtime_environment()` into `main_terminal.py` startup for real runtime placeholder resolution.
+  - Added `tests/text_to_sql_agent/config/test_settings_runtime.py` for runtime env-file merge and backend resolution coverage.
 
 - Refactored `main_terminal.py` (T-2026-05-18-036):
   - Replaced raw `sqlite3` introspection with `SQLiteIntrospectionProvider` + `normalize_raw_schema` from the established repository/service layers.

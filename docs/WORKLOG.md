@@ -27,6 +27,12 @@ Rules:
   - Added `resolve_secret_placeholders()` with source priority and environment-specific unresolved-placeholder policy.
   - Exported resolver utilities via `src/text_to_sql_agent/config/__init__.py`.
   - Added focused tests in `tests/text_to_sql_agent/config/test_secrets.py` for precedence, prod fail-fast, dev warnings, and file backend behavior.
+- Runtime integration completed:
+  - Added `src/text_to_sql_agent/config/settings.py` with `load_runtime_environment()` to merge `.env` + environment-specific files (`.env.dev/.env.test/.env.prod`), resolve placeholders, and populate runtime environment.
+  - Integrated runtime loader into `main_terminal.py` startup so secret placeholder resolution executes in the real run path.
+  - Added integration tests in `tests/text_to_sql_agent/config/test_settings_runtime.py` for runtime loading behavior and environment-file selection.
+  - Validation executed: `ruff check` for touched config/runtime files and targeted pytest suite for config tests.
+  - Task status moved to `done`.
 
 ### T-2026-05-18-036 - Refactor terminal prototype into project architecture
 
