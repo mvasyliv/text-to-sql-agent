@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added SQL syntax validator agent (T-2026-05-18-044):
+  - New `src/text_to_sql_agent/agents/syntax_validator_agent.py` with deterministic syntax and safety checks for generated SQL.
+  - Validation now returns actionable errors for empty SQL, multiple statements, non-SELECT/WITH entrypoint, disallowed write/DDL operations, and unbalanced parentheses/quotes.
+  - Added `build_syntax_validator_node()` LangGraph adapter and wired it into `src/text_to_sql_agent/graphs/query_graph.py`, replacing the previous syntax-validator stub.
+  - Added focused tests in `tests/text_to_sql_agent/agents/test_syntax_validator_agent.py`.
+
 - Added SQL generator agent (T-2026-05-18-043):
   - New `src/text_to_sql_agent/agents/sql_generator_agent.py` with deterministic read-only SQL generation from user question and schema context.
   - Added `SQLGenerationResult` output structure and `build_sql_generator_node()` LangGraph adapter.

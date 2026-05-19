@@ -9,6 +9,26 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-044 - Implement SQL syntax validator agent
+
+- Created `src/text_to_sql_agent/agents/syntax_validator_agent.py`:
+  - Added `validate_sql_syntax(sql)` deterministic validation for MVP read-only policy.
+  - Validation rules: non-empty SQL, single statement, starts with `SELECT`/`WITH`, no disallowed write/DDL operations, balanced parentheses, balanced single quotes.
+  - Added `SQLSyntaxValidationResult` structured output (`valid`, `errors`).
+  - Added `build_syntax_validator_node()` LangGraph adapter that validates `edited_sql` (if present) or `generated_sql`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced syntax validator stub with `node_syntax_validator = build_syntax_validator_node()`.
+- Updated `src/text_to_sql_agent/agents/__init__.py` exports:
+  - Added `build_syntax_validator_node` and `validate_sql_syntax`.
+- Added tests `tests/text_to_sql_agent/agents/test_syntax_validator_agent.py` (10 cases):
+  - Valid SELECT and WITH CTE SQL.
+  - Invalid SQL cases: empty SQL, multiple statements, disallowed operations, unbalanced parentheses, unbalanced quotes.
+  - Node behavior for success, edited SQL precedence, and failure path.
+- Validation:
+  - `pytest tests/text_to_sql_agent/agents/test_syntax_validator_agent.py -v` -> 10 passed.
+  - `pytest tests/text_to_sql_agent/graphs/test_query_graph.py -v` -> 12 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-043 - Implement SQL generator agent
 
 - Created `src/text_to_sql_agent/agents/sql_generator_agent.py`:

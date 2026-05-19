@@ -18,6 +18,7 @@ from langgraph.types import interrupt
 
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
+from text_to_sql_agent.agents.syntax_validator_agent import build_syntax_validator_node
 from text_to_sql_agent.graphs.query_state import QueryState
 
 # Schema context node is built with a default connection config.
@@ -26,20 +27,12 @@ _DEFAULT_CONNECTION_CONFIG: dict = {}
 
 node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)
 node_sql_generator = build_sql_generator_node()
+node_syntax_validator = build_syntax_validator_node()
 
 
 # ---------------------------------------------------------------------------
 # Node implementations (stubs — replaced by real agents in later tasks)
 # ---------------------------------------------------------------------------
-def node_syntax_validator(state: QueryState) -> dict:
-    """Validate SQL syntax before security and approval checks."""
-    sql = state.get("generated_sql") or ""
-    valid = bool(sql.strip())
-    return {
-        "syntax_valid": valid,
-        "syntax_errors": [] if valid else ["Empty SQL"],
-        "log_messages": [f"syntax_validator: valid={valid}"],
-    }
 
 
 def node_security_guard(state: QueryState) -> dict:

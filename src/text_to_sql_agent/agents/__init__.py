@@ -9,6 +9,7 @@ from .schema_context_agent import (
     format_schema_context,
 )
 from .sql_generator_agent import build_sql_generator_node, generate_read_only_sql
+from .syntax_validator_agent import build_syntax_validator_node, validate_sql_syntax
 
 __all__ = [
     "SchemaReaderAgent",
@@ -18,4 +19,6 @@ __all__ = [
     "format_schema_context",
     "build_sql_generator_node",
     "generate_read_only_sql",
+    "build_syntax_validator_node",
+    "validate_sql_syntax",
 ]
