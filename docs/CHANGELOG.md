@@ -8,6 +8,11 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Added
 
+- Improved Chainlit launcher compatibility (T-2026-05-19-053):
+  - Updated `main_chainlit.py` to resolve Chainlit using three-step fallback: `python -m chainlit`, `chainlit` binary, then `uv run chainlit`.
+  - Added clearer startup and failure messaging, including the exact command used when process startup fails.
+  - Launcher now works in setups where dependencies are installed in uv-managed environment but not in `venvtext2sql`.
+
 - Observability and audit trail for agent runs (T-2026-05-18-052):
   - New `src/text_to_sql_agent/models/trace.py` with `AgentEvent` and `AuditTrail` Pydantic models for structured per-node tracing with user/conversation identity linkage.
   - New `src/text_to_sql_agent/services/audit_trail.py` with `make_agent_event()` factory (returns a plain dict for LangGraph serialisation) and `build_audit_trail()` to reconstruct a typed trail from a completed `QueryState`.

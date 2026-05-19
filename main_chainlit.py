@@ -7,7 +7,9 @@ through a browser.
 
 from __future__ import annotations
 
+import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -22,16 +24,40 @@ def _is_enabled(value: str | None, default: bool = True) -> bool:
 	return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _build_chainlit_base_command() -> list[str]:
+	"""Resolve a runnable Chainlit command for the current machine.
+
+	Resolution order:
+	1) current interpreter module (`python -m chainlit`)
+	2) shell executable (`chainlit`)
+	3) project-managed executable (`uv run chainlit`)
+	"""
+	if importlib.util.find_spec("chainlit") is not None:
+		return [sys.executable, "-m", "chainlit"]
+
+	chainlit_bin = shutil.which("chainlit")
+	if chainlit_bin:
+		return [chainlit_bin]
+
+	uv_bin = shutil.which("uv")
+	if uv_bin:
+		return [uv_bin, "run", "chainlit"]
+
+	raise RuntimeError(
+		"Chainlit is unavailable. Install dependencies with 'uv sync' or install "
+		"chainlit in the active Python environment."
+	)
+
+
 def build_chainlit_command() -> list[str]:
 	"""Build CLI command for running the Chainlit UI."""
 	host = os.getenv("CHAINLIT_HOST", "127.0.0.1")
 	port = os.getenv("CHAINLIT_PORT", "8000")
 	headless = _is_enabled(os.getenv("CHAINLIT_HEADLESS"), default=True)
+	base_command = _build_chainlit_base_command()
 
 	command = [
-		sys.executable,
-		"-m",
-		"chainlit",
+		*base_command,
 		"run",
 		str(APP_PATH),
 		"--host",
@@ -51,12 +77,21 @@ def main() -> None:
 		raise FileNotFoundError(f"Chainlit app file not found: {APP_PATH}")
 
 	command = build_chainlit_command()
+	host = os.getenv("CHAINLIT_HOST", "127.0.0.1")
+	port = os.getenv("CHAINLIT_PORT", "8000")
 	print("Starting Chainlit web UI...")
 	print(" ".join(command))
-	print("Open your browser at http://127.0.0.1:8000 (or configured host/port).")
+	print(f"Open your browser at http://{host}:{port}.")
 
 	try:
 		subprocess.run(command, check=True)
+	except RuntimeError as exc:
+		print(f"Failed to prepare Chainlit command: {exc}")
+		raise
+	except subprocess.CalledProcessError as exc:
+		print("Chainlit process exited with an error.")
+		print(f"Command: {' '.join(exc.cmd)}")
+		raise
 	except KeyboardInterrupt:
 		print("Chainlit server stopped.")
 

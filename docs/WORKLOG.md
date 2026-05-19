@@ -9,6 +9,23 @@ Rules:
 
 ## 2026-05-19
 
+### T-2026-05-19-053 - Make Chainlit launcher environment-agnostic
+
+- Diagnosed startup failure from `main_chainlit.py`:
+  - `venvtext2sql` interpreter did not have `chainlit` installed (`ModuleNotFoundError`).
+  - `uv run` environment did include `chainlit`, so runtime mismatch caused launcher failure.
+- Updated `main_chainlit.py`:
+  - Added `_build_chainlit_base_command()` with fallback order:
+    1) `python -m chainlit` (module available in current interpreter)
+    2) `chainlit` executable in PATH
+    3) `uv run chainlit`
+  - Kept existing host/port/headless options and improved browser URL output.
+  - Added clearer `CalledProcessError` message with command echo for troubleshooting.
+- Validation:
+  - `uv run ruff check main_chainlit.py` -> all checks passed.
+  - `venvtext2sql/bin/python -c "import main_chainlit; print(' '.join(main_chainlit.build_chainlit_command()))"`
+    resolved to `uv run chainlit run ...`, confirming fallback behavior.
+
 ### T-2026-05-18-052 - Add observability and audit trail for agent runs
 
 - Created `src/text_to_sql_agent/models/trace.py`:

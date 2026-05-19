@@ -22,6 +22,7 @@ _No open tasks_
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-05-19-053 | 2026-05-19 | Make Chainlit launcher environment-agnostic | done | Updated `main_chainlit.py` to resolve Chainlit runtime across interpreter module, CLI binary, and `uv run` fallback so web UI starts even when `chainlit` is missing in `venvtext2sql`. | `main_chainlit.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-05-18-052 | 2026-05-19 | Add observability and audit trail for agent runs | done | Delivered `AgentEvent` and `AuditTrail` Pydantic models, `audit_trail` service with `make_agent_event()` and `build_audit_trail()`, extended `QueryState` with `agent_events` field, and wired structured event emission into all pipeline nodes. Added 18 new tests; all 32 targeted tests pass, ruff clean. | `src/text_to_sql_agent/models/trace.py`, `src/text_to_sql_agent/services/audit_trail.py`, `src/text_to_sql_agent/graphs/query_state.py`, `src/text_to_sql_agent/agents/`, `src/text_to_sql_agent/graphs/query_graph.py`, `tests/text_to_sql_agent/models/test_trace.py`, `tests/text_to_sql_agent/services/test_audit_trail.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 
 | ID | Date | Title | Status | Summary | Related Files |

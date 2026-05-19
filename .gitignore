@@ -18,6 +18,7 @@ wheels/
 # Local data
 data/
 logs/
+.chainlit/
 
 # IDE
 .vscode/
