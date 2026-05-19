@@ -8,6 +8,13 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added data export agent and export service (T-2026-05-18-048):
+  - New `src/text_to_sql_agent/services/query_result_export.py` to export existing query results to CSV/JSON and optional XLSX.
+  - New `src/text_to_sql_agent/agents/export_agent.py` with `build_export_node()` and `export_execution_result()`.
+  - Export flow now uses only `execution_result` payload (no SQL re-execution).
+  - `src/text_to_sql_agent/graphs/query_graph.py` now uses export agent node instead of inline export stub.
+  - Added focused tests in `tests/text_to_sql_agent/services/test_query_result_export.py` and `tests/text_to_sql_agent/agents/test_export_agent.py`.
+
 - Added query execution agent and repository-backed execution path (T-2026-05-18-047):
   - New `src/text_to_sql_agent/agents/query_execution_agent.py` with read-only enforcement and normalized execution payload.
   - New query execution repository contract/factory and SQLite implementation:

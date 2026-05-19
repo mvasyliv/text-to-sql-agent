@@ -16,6 +16,7 @@ from langgraph.constants import END, START
 from langgraph.graph import StateGraph
 
 from text_to_sql_agent.agents.human_approval_agent import build_human_approval_node
+from text_to_sql_agent.agents.export_agent import build_export_node
 from text_to_sql_agent.agents.query_execution_agent import build_query_execution_node
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.agents.security_guard_agent import build_security_guard_node
@@ -32,6 +33,7 @@ node_sql_generator = build_sql_generator_node()
 node_syntax_validator = build_syntax_validator_node()
 node_security_guard = build_security_guard_node()
 node_human_approval = build_human_approval_node()
+node_export = build_export_node()
 
 
 def node_analytics(state: QueryState) -> dict:
@@ -39,14 +41,6 @@ def node_analytics(state: QueryState) -> dict:
     return {
         "chart_spec": {"type": "bar", "data": []},
         "log_messages": ["analytics: chart spec produced (stub)"],
-    }
-
-
-def node_export(state: QueryState) -> dict:
-    """Export the execution result to a downloadable file."""
-    return {
-        "export_path": "/tmp/export.csv",
-        "log_messages": ["export: file written (stub)"],
     }
 
 

@@ -9,6 +9,28 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-048 - Implement data export agent
+
+- Created `src/text_to_sql_agent/services/query_result_export.py`:
+  - Added `export_query_result(execution_result, export_format, output_dir)` for file export from already available execution payload.
+  - Supported export formats: CSV, JSON, and optional XLSX (`openpyxl` required).
+  - Added strict format validation, automatic output path generation, and normalized content structure.
+- Created `src/text_to_sql_agent/agents/export_agent.py`:
+  - Added `export_execution_result()` agent helper over service layer.
+  - Added `build_export_node()` LangGraph adapter that exports from `execution_result` only (no SQL re-execution).
+  - Node supports state override `export_format` with configurable default.
+- Updated exports:
+  - `src/text_to_sql_agent/services/__init__.py` now exports `export_query_result`.
+  - `src/text_to_sql_agent/agents/__init__.py` now exports `build_export_node` and `export_execution_result`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced export stub with `node_export = build_export_node()`.
+- Added tests:
+  - `tests/text_to_sql_agent/services/test_query_result_export.py` (4 cases)
+  - `tests/text_to_sql_agent/agents/test_export_agent.py` (4 cases)
+- Validation:
+  - `pytest` on new export tests + existing query graph tests -> 20 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-047 - Implement query execution agent
 
 - Created `src/text_to_sql_agent/agents/query_execution_agent.py`:
