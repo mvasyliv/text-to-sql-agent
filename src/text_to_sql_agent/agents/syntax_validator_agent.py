@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from text_to_sql_agent.services.audit_trail import make_agent_event
+
 
 _DISALLOWED_OPERATIONS = (
     "INSERT",
@@ -125,6 +127,17 @@ def build_syntax_validator_node():
                 "log_messages": [
                     f"syntax_validator: valid={result.valid}, errors={len(result.errors)}"
                 ],
+                "agent_events": [
+                    make_agent_event(
+                        agent="syntax_validator",
+                        event_type="syntax_validated",
+                        status="ok" if result.valid else "error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"valid": result.valid, "error_count": len(result.errors), "errors": result.errors},
+                    )
+                ],
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -133,6 +146,17 @@ def build_syntax_validator_node():
                 "status": "failed",
                 "error_message": f"syntax_validator: failed - {exc}",
                 "log_messages": [f"syntax_validator: ERROR - {exc}"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="syntax_validator",
+                        event_type="syntax_validated",
+                        status="error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"error": str(exc)},
+                    )
+                ],
             }
 
     return node

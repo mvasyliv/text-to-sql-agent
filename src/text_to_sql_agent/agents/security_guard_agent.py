@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from text_to_sql_agent.services.audit_trail import make_agent_event
+
 
 _DISALLOWED_OPERATIONS = (
     "insert",
@@ -101,6 +103,17 @@ def build_security_guard_node():
                     "security_guard: "
                     f"approved={result.approved}, violations={result.violations}"
                 ],
+                "agent_events": [
+                    make_agent_event(
+                        agent="security_guard",
+                        event_type="security_checked",
+                        status="ok" if result.approved else "error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"approved": result.approved, "violations": result.violations},
+                    )
+                ],
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -109,6 +122,17 @@ def build_security_guard_node():
                 "status": "failed",
                 "error_message": f"security_guard: failed - {exc}",
                 "log_messages": [f"security_guard: ERROR - {exc}"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="security_guard",
+                        event_type="security_checked",
+                        status="error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"error": str(exc)},
+                    )
+                ],
             }
 
     return node

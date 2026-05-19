@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
+## 2026-05-19
+
+### Added
+
+- Observability and audit trail for agent runs (T-2026-05-18-052):
+  - New `src/text_to_sql_agent/models/trace.py` with `AgentEvent` and `AuditTrail` Pydantic models for structured per-node tracing with user/conversation identity linkage.
+  - New `src/text_to_sql_agent/services/audit_trail.py` with `make_agent_event()` factory (returns a plain dict for LangGraph serialisation) and `build_audit_trail()` to reconstruct a typed trail from a completed `QueryState`.
+  - Extended `QueryState` with `agent_events: Annotated[list[dict], _append]` field so every pipeline node can append its structured event.
+  - All pipeline nodes (`schema_context`, `sql_generator`, `syntax_validator`, `security_guard`, `human_approval`, `query_executor`, `node_done`, `node_failed`) now emit a structured `AgentEvent` dict alongside their existing `log_messages`.
+  - New tests: `tests/text_to_sql_agent/models/test_trace.py` (9 cases) and `tests/text_to_sql_agent/services/test_audit_trail.py` (9 cases).
+
 ## 2026-05-18
 
 ### Changed

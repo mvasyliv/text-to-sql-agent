@@ -25,6 +25,7 @@ from text_to_sql_agent.agents.security_guard_agent import build_security_guard_n
 from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
 from text_to_sql_agent.agents.syntax_validator_agent import build_syntax_validator_node
 from text_to_sql_agent.graphs.query_state import QueryState
+from text_to_sql_agent.services.audit_trail import make_agent_event
 
 # Schema context node is built with a default connection config.
 # Override by passing a custom node to build_query_graph().
@@ -45,6 +46,16 @@ def node_done(state: QueryState) -> dict:
     return {
         "status": "done",
         "log_messages": ["done: workflow completed"],
+        "agent_events": [
+            make_agent_event(
+                agent="workflow",
+                event_type="workflow_done",
+                status="ok",
+                user_id=state.get("user_id"),
+                conversation_id=state.get("conversation_id"),
+                message_id=state.get("message_id"),
+            )
+        ],
     }
 
 
@@ -53,6 +64,17 @@ def node_failed(state: QueryState) -> dict:
     return {
         "status": "failed",
         "log_messages": ["failed: workflow terminated with error"],
+        "agent_events": [
+            make_agent_event(
+                agent="workflow",
+                event_type="workflow_failed",
+                status="error",
+                user_id=state.get("user_id"),
+                conversation_id=state.get("conversation_id"),
+                message_id=state.get("message_id"),
+                metadata={"error_message": state.get("error_message")},
+            )
+        ],
     }
 
 

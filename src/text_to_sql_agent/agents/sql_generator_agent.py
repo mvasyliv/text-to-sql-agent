@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from text_to_sql_agent.services.audit_trail import make_agent_event
+
 
 _TOKEN_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -160,6 +162,17 @@ def build_sql_generator_node(*, max_limit: int = 100):
                     "sql_generator: SQL generated"
                     f" (intent={result.intent}, table={result.table_used})"
                 ],
+                "agent_events": [
+                    make_agent_event(
+                        agent="sql_generator",
+                        event_type="sql_generated",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"intent": result.intent, "table_used": result.table_used},
+                    )
+                ],
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -168,6 +181,17 @@ def build_sql_generator_node(*, max_limit: int = 100):
                 "status": "failed",
                 "error_message": f"sql_generator: failed to generate SQL - {exc}",
                 "log_messages": [f"sql_generator: ERROR - {exc}"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="sql_generator",
+                        event_type="sql_generated",
+                        status="error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"error": str(exc)},
+                    )
+                ],
             }
 
     return node

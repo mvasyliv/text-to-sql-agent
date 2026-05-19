@@ -122,3 +122,6 @@ class QueryState(TypedDict):
     # -------------------------------------------------------------------
     log_messages: Annotated[list[str], _append]
     """Structured log entries appended by each node."""
+
+    agent_events: Annotated[list[dict], _append]
+    """Serialised AgentEvent dicts emitted by each pipeline node for audit."""

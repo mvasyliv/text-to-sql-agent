@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from text_to_sql_agent.models.schema import ColumnSchema, DatabaseSchema, TableSchema
 from text_to_sql_agent.repositories.provider_factory import get_introspection_provider
+from text_to_sql_agent.services.audit_trail import make_agent_event
 from text_to_sql_agent.services.schema_normalization import normalize_raw_schema
 
 # Words that should be skipped when the caller passes a table allowlist
@@ -130,6 +131,17 @@ def build_schema_context_node(connection_config: dict) -> callable:
                 "log_messages": [
                     f"schema_context: schema loaded for database '{database_id}' ({dialect})"
                 ],
+                "agent_events": [
+                    make_agent_event(
+                        agent="schema_context",
+                        event_type="schema_context_loaded",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"database_id": database_id, "dialect": dialect},
+                    )
+                ],
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -137,6 +149,17 @@ def build_schema_context_node(connection_config: dict) -> callable:
                 "status": "failed",
                 "error_message": f"schema_context: failed to load schema — {exc}",
                 "log_messages": [f"schema_context: ERROR — {exc}"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="schema_context",
+                        event_type="schema_context_loaded",
+                        status="error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"database_id": database_id, "error": str(exc)},
+                    )
+                ],
             }
 
     return node

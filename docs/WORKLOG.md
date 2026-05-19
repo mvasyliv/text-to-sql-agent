@@ -7,6 +7,33 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-05-19
+
+### T-2026-05-18-052 - Add observability and audit trail for agent runs
+
+- Created `src/text_to_sql_agent/models/trace.py`:
+  - `AgentEvent` Pydantic model with fields: `timestamp` (ISO 8601, auto-filled), `agent`, `event_type` (typed Literal union), `status` (ok/error/warning/pending), `user_id`, `conversation_id`, `message_id`, and `metadata: dict`.
+  - `AuditTrail` Pydantic model: ordered list of `AgentEvent` with identity fields and helpers `has_errors` and `events_by_agent()`.
+- Created `src/text_to_sql_agent/services/audit_trail.py`:
+  - `make_agent_event()`: constructs an `AgentEvent` and returns it as a plain dict (LangGraph checkpoint-safe).
+  - `build_audit_trail()`: reconstructs an `AuditTrail` from a raw `QueryState` dict, restoring identity and re-validating event dicts as `AgentEvent` instances.
+- Extended `src/text_to_sql_agent/graphs/query_state.py`:
+  - Added `agent_events: Annotated[list[dict], _append]` field to `QueryState`.
+- Updated all pipeline agent nodes to emit `agent_events` alongside `log_messages`:
+  - `schema_context_agent.py` → `schema_context_loaded` event (ok/error).
+  - `sql_generator_agent.py` → `sql_generated` event (ok/error), with `intent` and `table_used` in metadata.
+  - `syntax_validator_agent.py` → `syntax_validated` event (ok/error), with `valid`, `error_count`, `errors` in metadata.
+  - `security_guard_agent.py` → `security_checked` event (ok/error), with `approved` and `violations` in metadata.
+  - `human_approval_agent.py` → `human_approval` event (ok/warning), with `action` in metadata.
+  - `query_execution_agent.py` → `query_executed` event (ok/error), with `row_count`, `database_id`, `dialect` in metadata (stub mode recorded separately).
+  - `query_graph.py` `node_done`/`node_failed` → `workflow_done`/`workflow_failed` events.
+- Added tests:
+  - `tests/text_to_sql_agent/models/test_trace.py` (9 cases for `AgentEvent` and `AuditTrail`).
+  - `tests/text_to_sql_agent/services/test_audit_trail.py` (9 cases for `make_agent_event` and `build_audit_trail`).
+- Validation:
+  - `uv run pytest -q tests/text_to_sql_agent/models/test_trace.py tests/text_to_sql_agent/services/test_audit_trail.py tests/text_to_sql_agent/graphs/test_query_graph.py` → 32 passed.
+  - `uv run ruff check src/text_to_sql_agent/models/trace.py src/text_to_sql_agent/services/audit_trail.py src/text_to_sql_agent/agents/ src/text_to_sql_agent/graphs/query_graph.py` → all checks passed.
+
 ## 2026-05-18
 
 ### T-2026-05-18-051 - Build Chainlit UI flow for DB assistant

@@ -13,6 +13,8 @@ from typing import Any, Literal
 
 from langgraph.types import interrupt
 
+from text_to_sql_agent.services.audit_trail import make_agent_event
+
 
 ApprovalAction = Literal["approve", "reject", "cancel", "edit"]
 
@@ -63,6 +65,17 @@ def build_human_approval_node(interrupt_fn=interrupt):
                 "edited_sql": decision.edited_sql,
                 "status": "executing",
                 "log_messages": ["human_approval: SQL edited and approved by user"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="human_approval",
+                        event_type="human_approval",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"action": "edit"},
+                    )
+                ],
             }
 
         if decision.action == "approve":
@@ -70,6 +83,17 @@ def build_human_approval_node(interrupt_fn=interrupt):
                 "human_approved": True,
                 "status": "executing",
                 "log_messages": ["human_approval: SQL approved by user"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="human_approval",
+                        event_type="human_approval",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"action": "approve"},
+                    )
+                ],
             }
 
         return {
@@ -78,6 +102,17 @@ def build_human_approval_node(interrupt_fn=interrupt):
             "log_messages": [
                 "human_approval: rejected by user"
                 f" (decision={decision_payload!r})"
+            ],
+            "agent_events": [
+                make_agent_event(
+                    agent="human_approval",
+                    event_type="human_approval",
+                    status="warning",
+                    user_id=state.get("user_id"),
+                    conversation_id=state.get("conversation_id"),
+                    message_id=state.get("message_id"),
+                    metadata={"action": decision.action},
+                )
             ],
         }
 

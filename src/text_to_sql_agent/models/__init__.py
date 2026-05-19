@@ -29,6 +29,12 @@ from .session import (
     MessageRole,
     User,
 )
+from .trace import (
+    AgentEvent,
+    AgentEventStatus,
+    AgentEventType,
+    AuditTrail,
+)
 
 __all__ = [
     "ColumnSchema",
@@ -48,4 +54,8 @@ __all__ = [
     "Conversation",
     "MessageRole",
     "User",
+    "AgentEvent",
+    "AgentEventStatus",
+    "AgentEventType",
+    "AuditTrail",
 ]

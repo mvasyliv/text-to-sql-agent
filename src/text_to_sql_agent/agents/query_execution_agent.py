@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from text_to_sql_agent.repositories import get_query_execution_repository
+from text_to_sql_agent.services.audit_trail import make_agent_event
 
 _ALLOWED_PREFIXES = ("select", "with", "explain")
 
@@ -63,6 +64,17 @@ def build_query_execution_node(connection_config: dict[str, Any] | None = None):
                 "execution_error": None,
                 "status": "post_processing",
                 "log_messages": ["query_executor: query executed (stub mode)"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="query_executor",
+                        event_type="query_executed",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"mode": "stub", "row_count": 0},
+                    )
+                ],
             }
 
         try:
@@ -80,6 +92,21 @@ def build_query_execution_node(connection_config: dict[str, Any] | None = None):
                     "query_executor: query executed"
                     f" rows={result.get('row_count', 0)}"
                 ],
+                "agent_events": [
+                    make_agent_event(
+                        agent="query_executor",
+                        event_type="query_executed",
+                        status="ok",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={
+                            "database_id": state.get("database_id"),
+                            "dialect": state.get("dialect", "sqlite"),
+                            "row_count": result.get("row_count", 0),
+                        },
+                    )
+                ],
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -88,6 +115,17 @@ def build_query_execution_node(connection_config: dict[str, Any] | None = None):
                 "status": "failed",
                 "error_message": f"query_executor: failed - {exc}",
                 "log_messages": [f"query_executor: ERROR - {exc}"],
+                "agent_events": [
+                    make_agent_event(
+                        agent="query_executor",
+                        event_type="query_executed",
+                        status="error",
+                        user_id=state.get("user_id"),
+                        conversation_id=state.get("conversation_id"),
+                        message_id=state.get("message_id"),
+                        metadata={"error": str(exc)},
+                    )
+                ],
             }
 
     return node

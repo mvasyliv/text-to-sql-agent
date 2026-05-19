@@ -8,6 +8,7 @@ from .schema_indexing import index_schema_embeddings
 from .query_result_export import export_query_result
 from .query_analytics import QueryAnalyticsResult, build_one_shot_chart
 from .query_insights import QueryInsightResult, build_query_insight
+from .audit_trail import build_audit_trail, make_agent_event
 
 __all__ = [
     "build_snapshot_id",
@@ -19,4 +20,6 @@ __all__ = [
     "build_one_shot_chart",
     "QueryInsightResult",
     "build_query_insight",
+    "build_audit_trail",
+    "make_agent_event",
 ]
