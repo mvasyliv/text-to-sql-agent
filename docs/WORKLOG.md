@@ -9,6 +9,20 @@ Rules:
 
 ## 2026-05-19
 
+### T-2026-05-19-054 - Fix Chainlit app import path in uv runtime
+
+- Reproduced launcher failure with `uv run chainlit`: `ModuleNotFoundError: text_to_sql_agent`.
+- Verified root cause: uv-managed runtime did not include project `src` on import path.
+- Updated `main_chainlit.py`:
+  - Added `APP_ROOT` and `SRC_PATH` constants.
+  - Added `_build_runtime_env()` that prepends `src` and project root to `PYTHONPATH`.
+  - Updated subprocess invocation to run with `cwd=APP_ROOT` and the constructed runtime environment.
+- Added local artifact ignore rule for `chainlit.md` in `.gitignore`.
+- Validation:
+  - `uv run ruff check main_chainlit.py` -> all checks passed.
+  - Import smoke test with launcher-composed `PYTHONPATH` -> `import text_to_sql_agent` passed.
+  - `timeout 12s venvtext2sql/bin/python main_chainlit.py` -> Chainlit server started on `http://127.0.0.1:8000` and stopped only due to timeout.
+
 ### T-2026-05-19-053 - Make Chainlit launcher environment-agnostic
 
 - Diagnosed startup failure from `main_chainlit.py`:

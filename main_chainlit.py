@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 
 
+APP_ROOT = Path(__file__).resolve().parent
+SRC_PATH = APP_ROOT / "src"
 APP_PATH = Path(__file__).resolve().parent / "src" / "text_to_sql_agent" / "ui" / "chainlit_app.py"
 
 
@@ -71,6 +73,17 @@ def build_chainlit_command() -> list[str]:
 	return command
 
 
+def _build_runtime_env() -> dict[str, str]:
+	"""Build subprocess environment with project import paths."""
+	env = os.environ.copy()
+	pythonpath_parts = [str(SRC_PATH), str(APP_ROOT)]
+	existing_pythonpath = env.get("PYTHONPATH")
+	if existing_pythonpath:
+		pythonpath_parts.append(existing_pythonpath)
+	env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+	return env
+
+
 def main() -> None:
 	"""Start the Chainlit web page for interactive Q&A."""
 	if not APP_PATH.exists():
@@ -84,7 +97,7 @@ def main() -> None:
 	print(f"Open your browser at http://{host}:{port}.")
 
 	try:
-		subprocess.run(command, check=True)
+		subprocess.run(command, check=True, cwd=str(APP_ROOT), env=_build_runtime_env())
 	except RuntimeError as exc:
 		print(f"Failed to prepare Chainlit command: {exc}")
 		raise

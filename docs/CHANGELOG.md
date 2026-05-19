@@ -8,6 +8,11 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Added
 
+- Fixed Chainlit app imports for uv runtime (T-2026-05-19-054):
+  - Updated `main_chainlit.py` subprocess execution to set `cwd` to project root and inject `PYTHONPATH` with `src` + project root.
+  - Resolved `ModuleNotFoundError: text_to_sql_agent` when launching via `uv run chainlit`.
+  - Added `chainlit.md` to `.gitignore` as local Chainlit runtime artifact.
+
 - Improved Chainlit launcher compatibility (T-2026-05-19-053):
   - Updated `main_chainlit.py` to resolve Chainlit using three-step fallback: `python -m chainlit`, `chainlit` binary, then `uv run chainlit`.
   - Added clearer startup and failure messaging, including the exact command used when process startup fails.
