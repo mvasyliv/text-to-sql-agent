@@ -8,6 +8,15 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added query execution agent and repository-backed execution path (T-2026-05-18-047):
+  - New `src/text_to_sql_agent/agents/query_execution_agent.py` with read-only enforcement and normalized execution payload.
+  - New query execution repository contract/factory and SQLite implementation:
+    - `src/text_to_sql_agent/repositories/query_execution_repository.py`
+    - `src/text_to_sql_agent/repositories/sqlite_query_execution_repository.py`
+    - `src/text_to_sql_agent/repositories/query_execution_factory.py`
+  - `src/text_to_sql_agent/graphs/query_graph.py` now uses `build_query_execution_node(connection_config)` instead of inline execution stub.
+  - Added focused tests for the new agent and repository modules.
+
 - Added human approval gate agent (T-2026-05-18-046):
   - New `src/text_to_sql_agent/agents/human_approval_agent.py` with normalized decision handling for `approve`, `reject/cancel`, and `edit` actions.
   - Added `build_human_approval_node()` LangGraph adapter with explicit state transitions before execution.

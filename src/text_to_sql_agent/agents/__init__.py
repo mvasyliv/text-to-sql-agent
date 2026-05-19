@@ -16,6 +16,11 @@ from .human_approval_agent import (
     build_human_approval_node,
     normalize_approval_decision,
 )
+from .query_execution_agent import (
+    build_query_execution_node,
+    execute_approved_query,
+    is_read_only_query,
+)
 
 __all__ = [
     "SchemaReaderAgent",
@@ -32,4 +37,7 @@ __all__ = [
     "HumanApprovalDecision",
     "build_human_approval_node",
     "normalize_approval_decision",
+    "build_query_execution_node",
+    "execute_approved_query",
+    "is_read_only_query",
 ]

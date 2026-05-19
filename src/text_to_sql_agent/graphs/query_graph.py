@@ -16,6 +16,7 @@ from langgraph.constants import END, START
 from langgraph.graph import StateGraph
 
 from text_to_sql_agent.agents.human_approval_agent import build_human_approval_node
+from text_to_sql_agent.agents.query_execution_agent import build_query_execution_node
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.agents.security_guard_agent import build_security_guard_node
 from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
@@ -31,18 +32,6 @@ node_sql_generator = build_sql_generator_node()
 node_syntax_validator = build_syntax_validator_node()
 node_security_guard = build_security_guard_node()
 node_human_approval = build_human_approval_node()
-
-
-def node_query_executor(state: QueryState) -> dict:
-    """Execute the approved SQL via the MCP database server."""
-    sql = state.get("edited_sql") or state.get("generated_sql") or ""
-    # Stub: real implementation calls MCP execute-query tool
-    return {
-        "execution_result": {"rows": [], "columns": [], "row_count": 0, "sql": sql},
-        "execution_error": None,
-        "status": "post_processing",
-        "log_messages": ["query_executor: query executed via MCP (stub)"],
-    }
 
 
 def node_analytics(state: QueryState) -> dict:
@@ -132,6 +121,7 @@ def build_query_graph(checkpointer=None, connection_config: dict | None = None):
         if connection_config is not None
         else node_schema_context
     )
+    execution_node = build_query_execution_node(connection_config)
 
     builder = StateGraph(QueryState)
 
@@ -141,7 +131,7 @@ def build_query_graph(checkpointer=None, connection_config: dict | None = None):
     builder.add_node("syntax_validator", node_syntax_validator)
     builder.add_node("security_guard", node_security_guard)
     builder.add_node("human_approval", node_human_approval)
-    builder.add_node("query_executor", node_query_executor)
+    builder.add_node("query_executor", execution_node)
     builder.add_node("analytics", node_analytics)
     builder.add_node("export", node_export)
     builder.add_node("done", node_done)

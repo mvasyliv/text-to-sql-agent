@@ -9,6 +9,9 @@ from .vector_store_repository import VectorStoreRepository
 from .sqlite_provider import SQLiteIntrospectionProvider
 from .postgresql_provider import PostgresIntrospectionProvider
 from .session_repository import InMemorySessionRepository, SessionRepository
+from .query_execution_repository import QueryExecutionRepository
+from .sqlite_query_execution_repository import SQLiteQueryExecutionRepository
+from .query_execution_factory import get_query_execution_repository
 
 __all__ = [
     "SchemaIntrospectionProvider",
@@ -21,4 +24,7 @@ __all__ = [
     "PostgresIntrospectionProvider",
     "InMemorySessionRepository",
     "SessionRepository",
+    "QueryExecutionRepository",
+    "SQLiteQueryExecutionRepository",
+    "get_query_execution_repository",
 ]

@@ -9,6 +9,31 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-047 - Implement query execution agent
+
+- Created `src/text_to_sql_agent/agents/query_execution_agent.py`:
+  - Added `is_read_only_query()` read-only guard (`SELECT`/`WITH`/`EXPLAIN`).
+  - Added `execute_approved_query()` with dialect-based repository lookup and standardized payload (`database_id`, `dialect`, `sql`, `rows`, `columns`, `row_count`).
+  - Added `build_query_execution_node(connection_config)` LangGraph adapter with two modes:
+    - real mode when `connection_config` is provided
+    - stub fallback mode (for graph tests and dry-runs) when config is absent
+- Added execution repository layer:
+  - `src/text_to_sql_agent/repositories/query_execution_repository.py` (abstract contract)
+  - `src/text_to_sql_agent/repositories/sqlite_query_execution_repository.py` (SQLite implementation)
+  - `src/text_to_sql_agent/repositories/query_execution_factory.py` (dialect factory)
+- Updated exports:
+  - `src/text_to_sql_agent/agents/__init__.py` with query execution symbols.
+  - `src/text_to_sql_agent/repositories/__init__.py` with query execution repository/factory symbols.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced query executor stub with `build_query_execution_node(connection_config)`.
+  - Graph now executes approved SQL via repository path when config is available.
+- Added tests:
+  - `tests/text_to_sql_agent/agents/test_query_execution_agent.py` (10 cases)
+  - `tests/text_to_sql_agent/repositories/test_query_execution_repository.py` (4 cases)
+- Validation:
+  - `pytest` on new agent + repository tests and existing query graph tests -> 22 passed.
+  - `ruff check` on all modified files -> all checks passed.
+
 ### T-2026-05-18-046 - Implement human approval gate
 
 - Created `src/text_to_sql_agent/agents/human_approval_agent.py`:
