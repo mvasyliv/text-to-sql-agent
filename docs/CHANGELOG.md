@@ -8,6 +8,13 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added Chainlit UI flow for DB assistant (T-2026-05-18-051):
+  - New `src/text_to_sql_agent/ui/chainlit_app.py` implementing chat flow with SQL preview, approval actions, result rendering, and export actions.
+  - New `src/text_to_sql_agent/ui/handlers.py` with LangGraph-driven turn orchestration and explicit pause/resume handling for human approval.
+  - New `src/text_to_sql_agent/ui/renderers.py` for SQL/table/chart rendering helpers used by the Chainlit layer.
+  - Added UI-focused tests in `tests/text_to_sql_agent/ui/test_handlers.py` and `tests/text_to_sql_agent/ui/test_renderers.py`.
+  - Added `chainlit` dependency to `pyproject.toml` and updated lockfile.
+
 - Added insights agent for post-query conclusions (T-2026-05-18-050):
   - New `src/text_to_sql_agent/services/query_insights.py` to generate concise narrative insight text from `execution_result` and `chart_spec`.
   - New `src/text_to_sql_agent/agents/insights_agent.py` with `build_insights_node()` for LangGraph integration.

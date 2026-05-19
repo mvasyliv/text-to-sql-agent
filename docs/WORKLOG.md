@@ -9,6 +9,30 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-051 - Build Chainlit UI flow for DB assistant
+
+- Added `src/text_to_sql_agent/ui/` package with dedicated UI integration layer:
+  - `chainlit_app.py` with Chainlit chat handlers for message flow and action callbacks.
+  - `handlers.py` with deterministic orchestration helpers (`build_ui_runtime`, `start_query_turn`, `resume_query_turn`, export helpers) over the existing LangGraph query pipeline.
+  - `renderers.py` with SQL preview rendering, markdown table rendering, and chart-spec to Plotly figure conversion.
+- Implemented approval UI flow:
+  - SQL preview message is shown before execution.
+  - Action callbacks support `approve`, `reject`, and `edit` behavior.
+  - Edit flow captures revised SQL from the next user message and resumes the paused graph checkpoint.
+- Implemented result UI flow:
+  - Tabular result rendering from `execution_result` rows.
+  - One-shot chart rendering based on `chart_spec`.
+  - Export actions for CSV and JSON using existing export service.
+- Updated runtime/dependency wiring:
+  - Added `chainlit` dependency in `pyproject.toml` and refreshed `uv.lock` via `uv add`.
+  - Updated `main.py` with a thin entrypoint note for launching Chainlit app.
+- Added tests:
+  - `tests/text_to_sql_agent/ui/test_handlers.py` (3 cases)
+  - `tests/text_to_sql_agent/ui/test_renderers.py` (3 cases)
+- Validation:
+  - `uv run pytest -q tests/text_to_sql_agent/ui/test_handlers.py tests/text_to_sql_agent/ui/test_renderers.py tests/text_to_sql_agent/graphs/test_query_graph.py` -> 18 passed.
+  - `uv run ruff check src/text_to_sql_agent/ui tests/text_to_sql_agent/ui main.py docs` -> all checks passed.
+
 ### T-2026-05-18-050 - Implement insights agent over query results
 
 - Created `src/text_to_sql_agent/services/query_insights.py`:
