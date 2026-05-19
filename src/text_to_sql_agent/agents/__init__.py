@@ -22,6 +22,7 @@ from .query_execution_agent import (
     is_read_only_query,
 )
 from .export_agent import build_export_node, export_execution_result
+from .analytics_agent import build_analytics_node
 
 __all__ = [
     "SchemaReaderAgent",
@@ -43,4 +44,5 @@ __all__ = [
     "is_read_only_query",
     "build_export_node",
     "export_execution_result",
+    "build_analytics_node",
 ]

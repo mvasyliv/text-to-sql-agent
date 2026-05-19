@@ -8,6 +8,13 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added analytics agent and one-shot chart service (T-2026-05-18-049):
+  - New `src/text_to_sql_agent/services/query_analytics.py` with deterministic one-shot chart generation from `execution_result`.
+  - New `src/text_to_sql_agent/agents/analytics_agent.py` with `build_analytics_node()` integration for LangGraph.
+  - Analytics now supports category+numeric aggregation, categorical counts, numeric line fallback, and empty-result handling.
+  - `src/text_to_sql_agent/graphs/query_graph.py` now uses the analytics agent node instead of inline analytics stub.
+  - Added focused tests in `tests/text_to_sql_agent/services/test_query_analytics.py` and `tests/text_to_sql_agent/agents/test_analytics_agent.py`.
+
 - Added data export agent and export service (T-2026-05-18-048):
   - New `src/text_to_sql_agent/services/query_result_export.py` to export existing query results to CSV/JSON and optional XLSX.
   - New `src/text_to_sql_agent/agents/export_agent.py` with `build_export_node()` and `export_execution_result()`.

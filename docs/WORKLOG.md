@@ -9,6 +9,31 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-049 - Implement analytics agent for one-shot charts
+
+- Created `src/text_to_sql_agent/services/query_analytics.py`:
+  - Added `build_one_shot_chart(execution_result, max_points)` to derive one chart from an already executed tabular result.
+  - Added `QueryAnalyticsResult` with `chart_spec` and `insight_text`.
+  - Implemented deterministic strategy:
+    - categorical + numeric -> bar chart of `sum(numeric)` by category
+    - categorical only -> bar chart of frequency counts
+    - numeric only -> one-shot line chart
+    - empty/fallback handling with explicit insight text
+- Created `src/text_to_sql_agent/agents/analytics_agent.py`:
+  - Added `build_analytics_node()` LangGraph adapter.
+  - Node consumes `execution_result` only, outputs `chart_spec` + `insight_text`, and reports failures with `status=failed`.
+- Updated exports:
+  - `src/text_to_sql_agent/services/__init__.py` now exports `QueryAnalyticsResult` and `build_one_shot_chart`.
+  - `src/text_to_sql_agent/agents/__init__.py` now exports `build_analytics_node`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced analytics stub node with `node_analytics = build_analytics_node()`.
+- Added tests:
+  - `tests/text_to_sql_agent/services/test_query_analytics.py` (6 cases)
+  - `tests/text_to_sql_agent/agents/test_analytics_agent.py` (3 cases)
+- Validation:
+  - `pytest` on new analytics tests + existing query graph tests -> 21 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-048 - Implement data export agent
 
 - Created `src/text_to_sql_agent/services/query_result_export.py`:
