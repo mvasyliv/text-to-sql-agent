@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added SQL security guard agent (T-2026-05-18-045):
+  - New `src/text_to_sql_agent/agents/security_guard_agent.py` with deterministic read-only security checks.
+  - Security validation now blocks disallowed write/DDL operations and suspicious SQL patterns (inline/block comments, `UNION SELECT`, tautology `OR 1=1`).
+  - Added `build_security_guard_node()` LangGraph adapter and wired it into `src/text_to_sql_agent/graphs/query_graph.py`, replacing the previous security-guard stub.
+  - Added focused tests in `tests/text_to_sql_agent/agents/test_security_guard_agent.py`.
+
 - Added SQL syntax validator agent (T-2026-05-18-044):
   - New `src/text_to_sql_agent/agents/syntax_validator_agent.py` with deterministic syntax and safety checks for generated SQL.
   - Validation now returns actionable errors for empty SQL, multiple statements, non-SELECT/WITH entrypoint, disallowed write/DDL operations, and unbalanced parentheses/quotes.

@@ -17,6 +17,7 @@ from langgraph.graph import StateGraph
 from langgraph.types import interrupt
 
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
+from text_to_sql_agent.agents.security_guard_agent import build_security_guard_node
 from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
 from text_to_sql_agent.agents.syntax_validator_agent import build_syntax_validator_node
 from text_to_sql_agent.graphs.query_state import QueryState
@@ -28,26 +29,12 @@ _DEFAULT_CONNECTION_CONFIG: dict = {}
 node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)
 node_sql_generator = build_sql_generator_node()
 node_syntax_validator = build_syntax_validator_node()
+node_security_guard = build_security_guard_node()
 
 
 # ---------------------------------------------------------------------------
 # Node implementations (stubs — replaced by real agents in later tasks)
 # ---------------------------------------------------------------------------
-
-
-def node_security_guard(state: QueryState) -> dict:
-    """Enforce read-only policy and block suspicious SQL patterns."""
-    sql = (state.get("generated_sql") or "").strip().lower()
-    blocked_keywords = {"drop", "delete", "insert", "update", "truncate", "alter", "create"}
-    violations = [kw for kw in blocked_keywords if kw in sql]
-    approved = len(violations) == 0
-    return {
-        "security_approved": approved,
-        "security_violations": violations,
-        "log_messages": [f"security_guard: approved={approved}, violations={violations}"],
-    }
-
-
 def node_human_approval(state: QueryState) -> dict:
     """Pause execution and wait for explicit human approval of the SQL.
 

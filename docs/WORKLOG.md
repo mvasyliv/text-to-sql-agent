@@ -9,6 +9,26 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-045 - Implement SQL security guard agent
+
+- Created `src/text_to_sql_agent/agents/security_guard_agent.py`:
+  - Added `validate_sql_security(sql)` deterministic security checks for MVP read-only execution.
+  - Security rules: read-only statement entrypoint (`SELECT`/`WITH`), blocked DML/DDL operations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.), suspicious pattern detection (`--`, `/*`, `UNION SELECT`, `OR 1=1`).
+  - Added `SQLSecurityValidationResult` structured output (`approved`, `violations`).
+  - Added `build_security_guard_node()` LangGraph adapter that validates `edited_sql` (if present) or `generated_sql`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced security guard stub with `node_security_guard = build_security_guard_node()`.
+- Updated `src/text_to_sql_agent/agents/__init__.py` exports:
+  - Added `build_security_guard_node` and `validate_sql_security`.
+- Added tests `tests/text_to_sql_agent/agents/test_security_guard_agent.py` (11 cases):
+  - Approval for safe read-only queries.
+  - Rejections for non-read-only entrypoint, blocked operations, and suspicious patterns.
+  - Node behavior for success, edited SQL precedence, and failure path.
+- Validation:
+  - `pytest tests/text_to_sql_agent/agents/test_security_guard_agent.py -v` -> 11 passed.
+  - `pytest tests/text_to_sql_agent/graphs/test_query_graph.py -v` -> 12 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-044 - Implement SQL syntax validator agent
 
 - Created `src/text_to_sql_agent/agents/syntax_validator_agent.py`:
