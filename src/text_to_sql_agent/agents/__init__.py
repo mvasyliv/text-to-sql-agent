@@ -8,6 +8,7 @@ from .schema_context_agent import (
     build_schema_context_node,
     format_schema_context,
 )
+from .sql_generator_agent import build_sql_generator_node, generate_read_only_sql
 
 __all__ = [
     "SchemaReaderAgent",
@@ -15,4 +16,6 @@ __all__ = [
     "build_schema_context",
     "build_schema_context_node",
     "format_schema_context",
+    "build_sql_generator_node",
+    "generate_read_only_sql",
 ]

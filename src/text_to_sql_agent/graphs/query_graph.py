@@ -17,6 +17,7 @@ from langgraph.graph import StateGraph
 from langgraph.types import interrupt
 
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
+from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
 from text_to_sql_agent.graphs.query_state import QueryState
 
 # Schema context node is built with a default connection config.
@@ -24,22 +25,12 @@ from text_to_sql_agent.graphs.query_state import QueryState
 _DEFAULT_CONNECTION_CONFIG: dict = {}
 
 node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)
+node_sql_generator = build_sql_generator_node()
 
 
 # ---------------------------------------------------------------------------
 # Node implementations (stubs — replaced by real agents in later tasks)
 # ---------------------------------------------------------------------------
-
-
-def node_sql_generator(state: QueryState) -> dict:
-    """Generate a read-only SQL query from the user question and schema context."""
-    return {
-        "generated_sql": f"SELECT * FROM ... -- generated for: {state['user_question']}",
-        "sql_rationale": "stub rationale",
-        "log_messages": ["sql_generator: SQL generated (stub)"],
-    }
-
-
 def node_syntax_validator(state: QueryState) -> dict:
     """Validate SQL syntax before security and approval checks."""
     sql = state.get("generated_sql") or ""

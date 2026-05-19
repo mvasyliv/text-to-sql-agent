@@ -8,6 +8,13 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added SQL generator agent (T-2026-05-18-043):
+  - New `src/text_to_sql_agent/agents/sql_generator_agent.py` with deterministic read-only SQL generation from user question and schema context.
+  - Added `SQLGenerationResult` output structure and `build_sql_generator_node()` LangGraph adapter.
+  - SQL generator now detects basic intent (`count` vs `list`), selects a table from schema context, enforces safe limit for preview queries, and falls back to `SELECT 1 AS result LIMIT 1` when schema tables are unavailable.
+  - Wired real SQL generator node into `src/text_to_sql_agent/graphs/query_graph.py`, replacing the previous stub implementation.
+  - Added targeted tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
 - Added schema context agent (T-2026-05-18-042):
   - New `src/text_to_sql_agent/agents/schema_context_agent.py` with `format_schema_context`, `build_schema_context`, and `build_schema_context_node`.
   - Schema formatted as compact text block: `-- Database: id (dialect)` header, `TABLE name / col type [PK/FK/NOT NULL]` body, with optional per-table filtering and stopword/punctuation normalization.

@@ -9,6 +9,29 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-043 - Implement SQL generator agent
+
+- Created `src/text_to_sql_agent/agents/sql_generator_agent.py`:
+  - `generate_read_only_sql(user_question, schema_context, dialect, max_limit)` with deterministic read-only SQL generation.
+  - `SQLGenerationResult` structured output (`sql`, `rationale`, `table_used`, `intent`).
+  - Intent detection for MVP (`count` vs `list`) based on user question tokens.
+  - Schema parser for `TABLE ...` / column lines from formatted schema context.
+  - Identifier safety checks and SQL quoting for SQLite/PostgreSQL.
+  - Safe fallback query (`SELECT 1 AS result LIMIT 1`) when schema tables are unavailable.
+- Added LangGraph adapter `build_sql_generator_node(max_limit=100)`:
+  - Produces `generated_sql`, `sql_rationale`, `status=validating`, and structured log messages.
+  - Returns `status=failed` + `error_message` on generation errors.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced SQL generator stub node with `node_sql_generator = build_sql_generator_node()`.
+- Updated `src/text_to_sql_agent/agents/__init__.py` exports:
+  - Added `generate_read_only_sql` and `build_sql_generator_node`.
+- Added tests `tests/text_to_sql_agent/agents/test_sql_generator_agent.py` (7 cases):
+  - Count intent, list intent with limit, table selection fallback, no-table probe query, invalid limit, node success path, node failure path.
+- Validation:
+  - `pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -v` -> 7 passed.
+  - `pytest tests/text_to_sql_agent/graphs/test_query_graph.py -v` -> 12 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-042 - Implement schema context agent
 
 - Created `src/text_to_sql_agent/agents/schema_context_agent.py`:
