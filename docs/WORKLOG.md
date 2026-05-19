@@ -9,6 +9,28 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-046 - Implement human approval gate
+
+- Created `src/text_to_sql_agent/agents/human_approval_agent.py`:
+  - Added `HumanApprovalDecision` and `normalize_approval_decision()` for explicit action normalization.
+  - Supported approval actions: `approve`, `reject`/`cancel`, and `edit`.
+  - Added `build_human_approval_node()` LangGraph adapter that pauses via interrupt payload and applies strict state transitions.
+- State transition behavior implemented:
+  - `approve` -> `human_approved=True`, `status=executing`.
+  - `edit` -> `human_approved=True`, `edited_sql=<user_sql>`, `status=executing`.
+  - `reject/cancel/unknown` -> `human_approved=False`, `status=cancelled`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Replaced inline human approval node implementation with `node_human_approval = build_human_approval_node()`.
+- Updated `src/text_to_sql_agent/agents/__init__.py` exports:
+  - Added `HumanApprovalDecision`, `build_human_approval_node`, and `normalize_approval_decision`.
+- Added tests `tests/text_to_sql_agent/agents/test_human_approval_agent.py` (9 cases):
+  - Decision normalization cases for approve/reject/cancel/edit/unknown.
+  - Node transitions for approve, reject, and edit.
+- Validation:
+  - `pytest tests/text_to_sql_agent/agents/test_human_approval_agent.py -v` -> 9 passed.
+  - `pytest tests/text_to_sql_agent/graphs/test_query_graph.py -v` -> 12 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-045 - Implement SQL security guard agent
 
 - Created `src/text_to_sql_agent/agents/security_guard_agent.py`:

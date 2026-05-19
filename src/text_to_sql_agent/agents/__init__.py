@@ -11,6 +11,11 @@ from .schema_context_agent import (
 from .sql_generator_agent import build_sql_generator_node, generate_read_only_sql
 from .syntax_validator_agent import build_syntax_validator_node, validate_sql_syntax
 from .security_guard_agent import build_security_guard_node, validate_sql_security
+from .human_approval_agent import (
+    HumanApprovalDecision,
+    build_human_approval_node,
+    normalize_approval_decision,
+)
 
 __all__ = [
     "SchemaReaderAgent",
@@ -24,4 +29,7 @@ __all__ = [
     "validate_sql_syntax",
     "build_security_guard_node",
     "validate_sql_security",
+    "HumanApprovalDecision",
+    "build_human_approval_node",
+    "normalize_approval_decision",
 ]

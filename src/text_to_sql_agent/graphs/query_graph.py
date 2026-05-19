@@ -14,8 +14,8 @@ for an explicit user decision (approve / reject / edit) before proceeding.
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import END, START
 from langgraph.graph import StateGraph
-from langgraph.types import interrupt
 
+from text_to_sql_agent.agents.human_approval_agent import build_human_approval_node
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.agents.security_guard_agent import build_security_guard_node
 from text_to_sql_agent.agents.sql_generator_agent import build_sql_generator_node
@@ -30,46 +30,7 @@ node_schema_context = build_schema_context_node(_DEFAULT_CONNECTION_CONFIG)
 node_sql_generator = build_sql_generator_node()
 node_syntax_validator = build_syntax_validator_node()
 node_security_guard = build_security_guard_node()
-
-
-# ---------------------------------------------------------------------------
-# Node implementations (stubs — replaced by real agents in later tasks)
-# ---------------------------------------------------------------------------
-def node_human_approval(state: QueryState) -> dict:
-    """Pause execution and wait for explicit human approval of the SQL.
-
-    Uses LangGraph interrupt() to suspend the graph. The caller resumes
-    the graph by invoking it with Command(resume=<decision>) where decision
-    is one of: 'approve', 'reject', or {'edit': '<new_sql>'}.
-    """
-    sql = state.get("edited_sql") or state.get("generated_sql") or ""
-    decision = interrupt(
-        {
-            "prompt": "Review the SQL query below and choose an action.",
-            "sql": sql,
-            "actions": ["approve", "reject", "edit"],
-        }
-    )
-
-    if isinstance(decision, dict) and "edit" in decision:
-        return {
-            "human_approved": True,
-            "edited_sql": decision["edit"],
-            "status": "executing",
-            "log_messages": ["human_approval: SQL edited and approved by user"],
-        }
-    if decision == "approve":
-        return {
-            "human_approved": True,
-            "status": "executing",
-            "log_messages": ["human_approval: SQL approved by user"],
-        }
-    # reject or unexpected
-    return {
-        "human_approved": False,
-        "status": "cancelled",
-        "log_messages": [f"human_approval: rejected by user (decision={decision!r})"],
-    }
+node_human_approval = build_human_approval_node()
 
 
 def node_query_executor(state: QueryState) -> dict:

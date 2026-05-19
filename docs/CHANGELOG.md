@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added human approval gate agent (T-2026-05-18-046):
+  - New `src/text_to_sql_agent/agents/human_approval_agent.py` with normalized decision handling for `approve`, `reject/cancel`, and `edit` actions.
+  - Added `build_human_approval_node()` LangGraph adapter with explicit state transitions before execution.
+  - Human approval logic in `src/text_to_sql_agent/graphs/query_graph.py` is now delegated to the dedicated agent module.
+  - Added focused tests in `tests/text_to_sql_agent/agents/test_human_approval_agent.py`.
+
 - Added SQL security guard agent (T-2026-05-18-045):
   - New `src/text_to_sql_agent/agents/security_guard_agent.py` with deterministic read-only security checks.
   - Security validation now blocks disallowed write/DDL operations and suspicious SQL patterns (inline/block comments, `UNION SELECT`, tautology `OR 1=1`).
