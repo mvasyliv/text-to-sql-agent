@@ -9,11 +9,9 @@ Tests cover:
 - Human can edit SQL before approval.
 """
 
-import pytest
 from langgraph.types import Command
 
 from text_to_sql_agent.graphs.query_graph import (
-    QueryState,
     build_query_graph,
     node_security_guard,
     node_syntax_validator,
@@ -132,6 +130,7 @@ class TestQueryGraph:
         assert result["human_approved"] is True
         assert result["execution_result"] is not None
         assert result["chart_spec"] is not None
+        assert result["insight_text"] is not None
         assert result["export_path"] is not None
 
     def test_human_rejects_leads_to_cancelled(self):

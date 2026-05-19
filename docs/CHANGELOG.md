@@ -8,6 +8,12 @@ The format is intentionally simple and uses dated sections until versioned relea
 
 ### Changed
 
+- Added insights agent for post-query conclusions (T-2026-05-18-050):
+  - New `src/text_to_sql_agent/services/query_insights.py` to generate concise narrative insight text from `execution_result` and `chart_spec`.
+  - New `src/text_to_sql_agent/agents/insights_agent.py` with `build_insights_node()` for LangGraph integration.
+  - `src/text_to_sql_agent/graphs/query_graph.py` now includes a dedicated `insights` step between analytics and export.
+  - Added focused tests in `tests/text_to_sql_agent/services/test_query_insights.py` and `tests/text_to_sql_agent/agents/test_insights_agent.py`.
+
 - Added analytics agent and one-shot chart service (T-2026-05-18-049):
   - New `src/text_to_sql_agent/services/query_analytics.py` with deterministic one-shot chart generation from `execution_result`.
   - New `src/text_to_sql_agent/agents/analytics_agent.py` with `build_analytics_node()` integration for LangGraph.

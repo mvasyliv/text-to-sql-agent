@@ -9,6 +9,28 @@ Rules:
 
 ## 2026-05-18
 
+### T-2026-05-18-050 - Implement insights agent over query results
+
+- Created `src/text_to_sql_agent/services/query_insights.py`:
+  - Added deterministic `build_query_insight(execution_result, chart_spec)` service.
+  - Added `QueryInsightResult` contract containing concise narrative insight text.
+  - Insight logic summarizes row/column volume and chart metadata (type + plotted points), with explicit no-rows fallback.
+- Created `src/text_to_sql_agent/agents/insights_agent.py`:
+  - Added `build_insights_node()` LangGraph adapter.
+  - Node consumes `execution_result` and `chart_spec` only, returns `insight_text`, and fails safely if input payload is missing.
+- Updated exports:
+  - `src/text_to_sql_agent/services/__init__.py` now exports `QueryInsightResult` and `build_query_insight`.
+  - `src/text_to_sql_agent/agents/__init__.py` now exports `build_insights_node`.
+- Updated `src/text_to_sql_agent/graphs/query_graph.py`:
+  - Inserted insights step between analytics and export (`analytics -> insights -> export`).
+- Added tests:
+  - `tests/text_to_sql_agent/services/test_query_insights.py` (4 cases)
+  - `tests/text_to_sql_agent/agents/test_insights_agent.py` (2 cases)
+  - Updated `tests/text_to_sql_agent/graphs/test_query_graph.py` to assert `insight_text` presence on happy path.
+- Validation:
+  - `pytest` on new insights tests + existing query graph tests -> 18 passed.
+  - `ruff check` on modified files -> all checks passed.
+
 ### T-2026-05-18-049 - Implement analytics agent for one-shot charts
 
 - Created `src/text_to_sql_agent/services/query_analytics.py`:

@@ -7,6 +7,7 @@ from .schema_document_builder import build_schema_documents
 from .schema_indexing import index_schema_embeddings
 from .query_result_export import export_query_result
 from .query_analytics import QueryAnalyticsResult, build_one_shot_chart
+from .query_insights import QueryInsightResult, build_query_insight
 
 __all__ = [
     "build_snapshot_id",
@@ -16,4 +17,6 @@ __all__ = [
     "export_query_result",
     "QueryAnalyticsResult",
     "build_one_shot_chart",
+    "QueryInsightResult",
+    "build_query_insight",
 ]

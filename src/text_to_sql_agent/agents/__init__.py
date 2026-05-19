@@ -23,6 +23,7 @@ from .query_execution_agent import (
 )
 from .export_agent import build_export_node, export_execution_result
 from .analytics_agent import build_analytics_node
+from .insights_agent import build_insights_node
 
 __all__ = [
     "SchemaReaderAgent",
@@ -45,4 +46,5 @@ __all__ = [
     "build_export_node",
     "export_execution_result",
     "build_analytics_node",
+    "build_insights_node",
 ]

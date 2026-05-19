@@ -2,7 +2,7 @@
 
 Wires the following steps in order:
   schema_context -> sql_generator -> syntax_validator -> security_guard
-  -> human_approval -> query_executor -> [analytics | export | done]
+    -> human_approval -> query_executor -> analytics -> insights -> export -> done
 
 Each node is a thin stub that updates QueryState. Real agent logic
 will be plugged in by the dedicated agent tasks (T-2026-05-18-042 … 049).
@@ -18,6 +18,7 @@ from langgraph.graph import StateGraph
 from text_to_sql_agent.agents.analytics_agent import build_analytics_node
 from text_to_sql_agent.agents.human_approval_agent import build_human_approval_node
 from text_to_sql_agent.agents.export_agent import build_export_node
+from text_to_sql_agent.agents.insights_agent import build_insights_node
 from text_to_sql_agent.agents.query_execution_agent import build_query_execution_node
 from text_to_sql_agent.agents.schema_context_agent import build_schema_context_node
 from text_to_sql_agent.agents.security_guard_agent import build_security_guard_node
@@ -35,6 +36,7 @@ node_syntax_validator = build_syntax_validator_node()
 node_security_guard = build_security_guard_node()
 node_human_approval = build_human_approval_node()
 node_analytics = build_analytics_node()
+node_insights = build_insights_node()
 node_export = build_export_node()
 
 
@@ -121,6 +123,7 @@ def build_query_graph(checkpointer=None, connection_config: dict | None = None):
     builder.add_node("human_approval", node_human_approval)
     builder.add_node("query_executor", execution_node)
     builder.add_node("analytics", node_analytics)
+    builder.add_node("insights", node_insights)
     builder.add_node("export", node_export)
     builder.add_node("done", node_done)
     builder.add_node("failed", node_failed)
@@ -133,7 +136,8 @@ def build_query_graph(checkpointer=None, connection_config: dict | None = None):
     builder.add_conditional_edges("security_guard", _route_after_security)
     builder.add_conditional_edges("human_approval", _route_after_approval)
     builder.add_conditional_edges("query_executor", _route_after_execution)
-    builder.add_edge("analytics", "export")
+    builder.add_edge("analytics", "insights")
+    builder.add_edge("insights", "export")
     builder.add_edge("export", "done")
     builder.add_edge("done", END)
     builder.add_edge("failed", END)
