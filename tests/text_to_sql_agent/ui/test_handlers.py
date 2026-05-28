@@ -60,3 +60,16 @@ def test_build_export_files_supports_multiple_formats(tmp_path: Path):
     assert set(result) == {"csv", "json"}
     assert Path(result["csv"]).exists()
     assert Path(result["json"]).exists()
+
+
+def test_start_query_turn_propagates_selected_tables():
+    runtime = build_ui_runtime()
+    turn = start_query_turn(
+        runtime,
+        user_id="u-001",
+        conversation_id="c-003",
+        user_question="How many users?",
+        selected_tables=["users"],
+    )
+
+    assert turn.state["selected_tables"] == ["users"]

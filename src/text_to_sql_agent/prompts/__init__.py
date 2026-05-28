@@ -45,6 +45,15 @@ from .override_policy import (
     get_default_user_override_policy,
     validate_user_override_request,
 )
+from .few_shot_examples import (
+    FewShotExample,
+    SQLITE_FEW_SHOT_EXAMPLES,
+    format_few_shot_examples,
+    get_few_shot_examples,
+    get_few_shot_examples_for_tables,
+    get_formatted_few_shot_examples,
+)
+from .sql_generation_prompt import build_sql_generation_prompt
 
 __all__ = [
     "DIALECT_SCOPE_MATRIX",
@@ -78,4 +87,11 @@ __all__ = [
     "get_default_user_override_policy",
     "validate_user_override_request",
     "get_default_evaluation_gate_profile",
+    "FewShotExample",
+    "SQLITE_FEW_SHOT_EXAMPLES",
+    "format_few_shot_examples",
+    "get_few_shot_examples",
+    "get_few_shot_examples_for_tables",
+    "get_formatted_few_shot_examples",
+    "build_sql_generation_prompt",
 ]

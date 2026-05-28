@@ -41,19 +41,34 @@ def _get_runtime():
 
 async def _render_sql_approval(turn: QueryTurnResult) -> None:
     sql = str(turn.state.get("generated_sql") or "")
+    llm_notice = str(turn.state.get("llm_user_notice") or "").strip()
+    generation_mode = str(turn.state.get("sql_generation_mode") or "Deterministic").strip()
     actions = [
         cl.Action(name="approve_sql", payload={}, label="Approve"),
         cl.Action(name="reject_sql", payload={}, label="Reject"),
         cl.Action(name="edit_sql", payload={}, label="Edit"),
     ]
+    prefix = f"{llm_notice}\n\n" if llm_notice else ""
     await cl.Message(
         content=(
-            "Proposed SQL query:\n"
+            f"{prefix}Proposed SQL query:\n"
+            f"Generation mode: **{generation_mode}**\n\n"
             f"{render_sql_preview(sql)}\n\n"
             "Choose one action: approve, reject, or edit."
         ),
         actions=actions,
     ).send()
+
+
+def _build_chart_elements(chart_figure: dict | None) -> list:
+    """Build chart elements when Chainlit and Plotly support are available."""
+    if not chart_figure or not hasattr(cl, "Plotly"):
+        return []
+
+    try:
+        return [cl.Plotly(name="query_chart", figure=chart_figure, display="inline")]
+    except ModuleNotFoundError:
+        return []
 
 
 async def _render_query_result(state: dict) -> None:
@@ -71,21 +86,23 @@ async def _render_query_result(state: dict) -> None:
     table_markdown = render_markdown_table(execution_result)
     await cl.Message(content=table_markdown).send()
 
-    if insight:
-        await cl.Message(content=f"Insight: {insight}").send()
-
-    chart_figure = build_plotly_figure(state.get("chart_spec"))
-    if chart_figure and hasattr(cl, "Plotly"):
-        await cl.Message(
-            content="One-shot chart",
-            elements=[cl.Plotly(name="query_chart", figure=chart_figure, display="inline")],
-        ).send()
-
     export_actions = [
         cl.Action(name="export_csv", payload={}, label="Export CSV"),
         cl.Action(name="export_json", payload={}, label="Export JSON"),
     ]
-    await cl.Message(content="Export results:", actions=export_actions).send()
+
+    if insight:
+        await cl.Message(content=f"Insight: {insight}\n\n**Export results:**", actions=export_actions).send()
+    else:
+        await cl.Message(content="**Export results:**", actions=export_actions).send()
+
+    chart_figure = build_plotly_figure(state.get("chart_spec"))
+    chart_elements = _build_chart_elements(chart_figure)
+    if chart_elements:
+        await cl.Message(
+            content="One-shot chart",
+            elements=chart_elements,
+        ).send()
 
 
 if cl is not None:

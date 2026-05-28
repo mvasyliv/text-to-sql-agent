@@ -58,6 +58,7 @@ def start_query_turn(
     user_id: str,
     conversation_id: str,
     user_question: str,
+    selected_tables: list[str] | None = None,
     thread_id: str | None = None,
 ) -> QueryTurnResult:
     """Start a new graph turn and return intermediate state."""
@@ -81,6 +82,7 @@ def start_query_turn(
         user_question=user_question,
         database_id=runtime.database_id,
         dialect=runtime.dialect,
+        selected_tables=selected_tables,
     )
     result = runtime.graph.invoke(
         state,
@@ -160,6 +162,7 @@ def _initial_query_state(
     user_question: str,
     database_id: str,
     dialect: str,
+    selected_tables: list[str] | None,
 ) -> dict[str, Any]:
     message_id = f"msg-{uuid4().hex}"
     return {
@@ -169,9 +172,14 @@ def _initial_query_state(
         "user_question": user_question,
         "database_id": database_id,
         "dialect": dialect,
+        "selected_tables": selected_tables,
         "schema_context": None,
         "generated_sql": None,
+        "sql_generation_prompt": None,
+        "sql_generation_mode": None,
         "sql_rationale": None,
+        "llm_status": None,
+        "llm_user_notice": None,
         "syntax_valid": None,
         "syntax_errors": [],
         "security_approved": None,

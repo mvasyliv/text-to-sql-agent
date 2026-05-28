@@ -44,6 +44,9 @@ class QueryState(TypedDict):
     dialect: str
     """SQL dialect expected by the target database (sqlite, postgresql, …)."""
 
+    selected_tables: list[str] | None
+    """Optional list of selected table names used for schema and prompt scoping."""
+
     # -------------------------------------------------------------------
     # Schema context — filled by schema context agent
     # -------------------------------------------------------------------
@@ -56,8 +59,20 @@ class QueryState(TypedDict):
     generated_sql: str | None
     """SQL produced by the generator agent."""
 
+    sql_generation_prompt: str | None
+    """Rendered SQL generation prompt text used for debugging and traceability."""
+
+    sql_generation_mode: str | None
+    """Visible SQL generation mode label: LLM | Few-shot fallback | Deterministic."""
+
     sql_rationale: str | None
     """Brief explanation of why this SQL was generated."""
+
+    llm_status: str | None
+    """LLM generation status for this turn (ok/disabled/missing_api_key/...)."""
+
+    llm_user_notice: str | None
+    """Optional user-facing notice when LLM is unavailable and fallback is used."""
 
     # -------------------------------------------------------------------
     # Validation — filled by syntax validator agent

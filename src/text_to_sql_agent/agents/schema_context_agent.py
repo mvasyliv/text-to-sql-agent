@@ -123,8 +123,14 @@ def build_schema_context_node(connection_config: dict) -> callable:
     def node(state: dict) -> dict:
         database_id = state["database_id"]
         dialect = state.get("dialect", "sqlite")
+        selected_tables = state.get("selected_tables")
         try:
-            context = build_schema_context(database_id, connection_config, dialect)
+            context = build_schema_context(
+                database_id,
+                connection_config,
+                dialect,
+                table_filter=selected_tables,
+            )
             return {
                 "schema_context": context,
                 "status": "validating",
@@ -139,7 +145,11 @@ def build_schema_context_node(connection_config: dict) -> callable:
                         user_id=state.get("user_id"),
                         conversation_id=state.get("conversation_id"),
                         message_id=state.get("message_id"),
-                        metadata={"database_id": database_id, "dialect": dialect},
+                        metadata={
+                            "database_id": database_id,
+                            "dialect": dialect,
+                            "selected_tables": selected_tables,
+                        },
                     )
                 ],
             }

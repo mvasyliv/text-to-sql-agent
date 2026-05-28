@@ -84,10 +84,24 @@ def _build_runtime_env() -> dict[str, str]:
 	return env
 
 
+def _prepare_runtime_environment() -> None:
+	"""Load .env and secret placeholders into process environment for launcher."""
+	if str(SRC_PATH) not in sys.path:
+		sys.path.insert(0, str(SRC_PATH))
+
+	from text_to_sql_agent.config import load_runtime_environment
+
+	result = load_runtime_environment(project_root=APP_ROOT)
+	for warning in result.warnings:
+		print(f"Config warning: {warning}")
+
+
 def main() -> None:
 	"""Start the Chainlit web page for interactive Q&A."""
 	if not APP_PATH.exists():
 		raise FileNotFoundError(f"Chainlit app file not found: {APP_PATH}")
+
+	_prepare_runtime_environment()
 
 	command = build_chainlit_command()
 	host = os.getenv("CHAINLIT_HOST", "127.0.0.1")

@@ -7,7 +7,166 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-05-26
+
+### T-2026-05-26-065 - Load LLM API key from secrets in Chainlit launcher
+
+- Diagnosed Chainlit LLM fallback root cause: web launcher path did not call `load_runtime_environment()`, so placeholders from `.env.dev` were not resolved and `LLM_API_KEY` was missing in process environment.
+- Updated `main_chainlit.py`:
+  - Added `_prepare_runtime_environment()` call before building/running Chainlit command.
+  - Ensured `src/` is inserted into `sys.path` before importing `text_to_sql_agent.config` for robust launcher execution.
+  - Printed runtime config warnings when secret placeholders remain unresolved.
+- Verification:
+  - `venvtext2sql/bin/python -c "import os; import main_chainlit; main_chainlit._prepare_runtime_environment(); print('LLM_API_KEY=' + ('SET' if bool(os.getenv('LLM_API_KEY')) else 'EMPTY'))"` -> `LLM_API_KEY=SET`.
+  - `source venvtext2sql/bin/activate && timeout 12s ./run_main_chainlit.sh` -> Chainlit started successfully with launcher flow intact.
+
+### T-2026-05-26-064 - Show SQL generation mode in Chainlit UI
+
+- Added explicit SQL generation mode labeling for users in Chainlit SQL preview:
+  - `LLM`
+  - `Few-shot fallback`
+  - `Deterministic`
+- Implementation changes:
+  - Added `sql_generation_mode` to SQL generator node output in `src/text_to_sql_agent/agents/sql_generator_agent.py`.
+  - Added `sql_generation_mode` field to `QueryState` in `src/text_to_sql_agent/graphs/query_state.py` and initialized it in UI state bootstrap (`src/text_to_sql_agent/ui/handlers.py`).
+  - Updated SQL approval rendering in `src/text_to_sql_agent/ui/chainlit_app.py` to display generation mode above SQL preview.
+- Added/updated tests:
+  - `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`
+  - `tests/text_to_sql_agent/ui/test_chainlit_app.py`
+- Validation:
+  - `source venvtext2sql/bin/activate && pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/graphs/test_query_graph.py tests/text_to_sql_agent/ui/test_handlers.py -q` -> 33 passed.
+
+### T-2026-05-26-063 - Strengthen few-shot matching and show LLM fallback notice
+
+- Improved few-shot matching quality in `src/text_to_sql_agent/agents/sql_generator_agent.py`:
+  - Added exact phrase priority in scoring.
+  - Added entity-aware scoring signals for country codes (e.g., `US`, `UA`) and numeric literals.
+  - Tightened selection via combined overlap + entity score threshold to reduce near-miss example selection.
+- Extended SQL generator result/state with LLM status metadata:
+  - Added `llm_status` and `llm_user_notice` in SQL generation output.
+  - Classified LLM path outcomes (`ok`, `disabled`, `missing_api_key`, `client_unavailable`, `error`, `unsafe_output`).
+  - Generated a user-facing notice for unavailable LLM statuses only.
+- Wired the notice to Chainlit UI:
+  - `src/text_to_sql_agent/ui/chainlit_app.py` now prepends the notice in SQL approval message when fallback was used due to LLM unavailability.
+  - Added `llm_status`/`llm_user_notice` to query state schema and initial UI state.
+- Added tests:
+  - Enhanced agent tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py` for exact/entity matching and LLM status behavior.
+  - Added Chainlit UI test in `tests/text_to_sql_agent/ui/test_chainlit_app.py` for notice rendering in approval message.
+- Validation:
+  - `source venvtext2sql/bin/activate && pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/graphs/test_query_graph.py tests/text_to_sql_agent/ui/test_handlers.py -q` -> 33 passed.
+
+### T-2026-05-26-062 - Apply few-shot patterns in non-LLM fallback
+
+- Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to use table-aware few-shot examples in deterministic fallback mode:
+  - Added token-based few-shot matching helper for user question vs example input.
+  - Added fallback step order: LLM SQL -> matching few-shot SQL -> generic deterministic synthesis.
+  - Added read-only gate before accepting matched few-shot SQL.
+- This ensures example prompts influence final SQL output even when LLM generation is disabled or unavailable.
+- Added regression test `test_uses_matching_few_shot_when_llm_unavailable` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py` for scenario:
+  - `get list userid from activities for country US`
+  - Expected SQL pattern from few-shot example with `userid` and US country filters.
+- Validation:
+  - `source venvtext2sql/bin/activate && pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py tests/text_to_sql_agent/graphs/test_query_graph.py tests/text_to_sql_agent/ui/test_handlers.py -q` -> 27 passed.
+
+### T-2026-05-26-061 - Make Chainlit launcher auto-select free port
+
+- Updated `run_main_chainlit.sh` to improve launch reliability:
+  - Added startup validation for `main_chainlit.py` existence.
+  - Added Python interpreter resolution helper.
+  - Added automatic free-port detection on `127.0.0.1` in range `8000..8010` when `CHAINLIT_PORT` is not set.
+  - Exports detected `CHAINLIT_PORT` before launching `main_chainlit.py`.
+- Validation:
+  - `source venvtext2sql/bin/activate && timeout 12s ./run_main_chainlit.sh` -> launcher selected `CHAINLIT_PORT=8001` and started Chainlit successfully.
+
+### T-2026-05-26-060 - Connect prompt builder to LLM SQL generation
+
+- Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to run a real LLM SQL generation step using the existing SQL prompt builder output.
+- Added LLM integration behavior:
+  - Reads API key from supported aliases (`OPENAI_API_KEY`, `OPENAI_KEY`, `OPENAI_TOKEN`, `LLM_API_KEY`).
+  - Uses `ChatOpenAI` with model from `OPENAI_MODEL` (default `gpt-4o-mini`) and `temperature=0`.
+  - Uses `SQL_GENERATOR_LLM_ENABLED` flag (default enabled) to allow runtime disablement.
+- Added response safety and robustness:
+  - Extracts SQL from fenced and plain outputs.
+  - Accepts only read-only SQL (`SELECT`/`WITH`/`EXPLAIN`) and rejects blocked write/DDL tokens.
+  - Falls back to deterministic SQL generation if LLM is unavailable, disabled, errors, or returns unsafe SQL.
+- Added focused tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`:
+  - LLM output is used when available.
+  - Fallback path remains deterministic when LLM path is unavailable.
+- Validation:
+  - `source venvtext2sql/bin/activate && pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py tests/text_to_sql_agent/graphs/test_query_graph.py tests/text_to_sql_agent/ui/test_handlers.py -q` -> 26 passed.
+
+### T-2026-05-26-059 - Add table-aware few-shot filtering and selected tables propagation
+
+- Extended `FewShotExample` with table metadata and introduced table-aware filtering APIs:
+  - Added `tables` field in `src/text_to_sql_agent/prompts/few_shot_examples.py`.
+  - Added `get_few_shot_examples_for_tables(dialect, selected_tables)`.
+  - Updated `get_formatted_few_shot_examples(...)` to support optional table filtering.
+- Added prompt builder module `src/text_to_sql_agent/prompts/sql_generation_prompt.py` to compose SQL generation prompt text with dialect, schema context, and filtered few-shot examples.
+- Wired selected table scope across query pipeline:
+  - Added `selected_tables` and `sql_generation_prompt` fields to `QueryState` (`src/text_to_sql_agent/graphs/query_state.py`).
+  - Updated UI state creation in `src/text_to_sql_agent/ui/handlers.py` to accept and store `selected_tables`.
+  - Updated schema context node to pass `selected_tables` as `table_filter` when building schema context (`src/text_to_sql_agent/agents/schema_context_agent.py`).
+  - Updated SQL generator node to build and expose `sql_generation_prompt` and track `few_shot_count` (`src/text_to_sql_agent/agents/sql_generator_agent.py`).
+- Updated exports in `src/text_to_sql_agent/prompts/__init__.py` for new prompt/filtering APIs.
+- Added targeted tests:
+  - `tests/text_to_sql_agent/prompts/test_few_shot_examples.py`
+  - `tests/text_to_sql_agent/prompts/test_sql_generation_prompt.py`
+  - `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`
+  - `tests/text_to_sql_agent/agents/test_schema_context_agent.py`
+  - `tests/text_to_sql_agent/graphs/test_query_graph.py`
+  - `tests/text_to_sql_agent/ui/test_handlers.py`
+- Validation:
+  - `source venvtext2sql/bin/activate && pytest tests/text_to_sql_agent/prompts/test_few_shot_examples.py tests/text_to_sql_agent/prompts/test_sql_generation_prompt.py tests/text_to_sql_agent/agents/test_sql_generator_agent.py tests/text_to_sql_agent/agents/test_schema_context_agent.py tests/text_to_sql_agent/graphs/test_query_graph.py tests/text_to_sql_agent/ui/test_handlers.py -q` -> 48 passed.
+  - VS Code diagnostics check on modified source files -> no errors found.
+
 ## 2026-05-19
+
+### T-2026-05-19-058 - Move Chainlit export actions above chart
+
+- Investigated the regression after restoring Plotly support: export controls appeared to disappear because the optional chart message was rendered before the export-action message.
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py` so `_render_query_result()` now sends the insight/export message before the optional chart block.
+- Added a focused ordering test in `tests/text_to_sql_agent/ui/test_chainlit_app.py` that stubs Chainlit messages and asserts export actions are sent before the chart message.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/ui/test_renderers.py tests/text_to_sql_agent/ui/test_handlers.py` -> 9 passed.
+  - `venvtext2sql/bin/ruff check src/text_to_sql_agent/ui/chainlit_app.py tests/text_to_sql_agent/ui/test_chainlit_app.py` -> all checks passed.
+
+### T-2026-05-19-057 - Add Plotly dependency for Chainlit charts
+
+- Added `plotly` to project dependencies with `uv add plotly`, which updated `pyproject.toml` and `uv.lock`.
+- Verified dependency resolution added `plotly==6.7.0` and transitive dependency `narwhals==2.21.2` to the lockfile.
+- Synced the canonical environment with `source venvtext2sql/bin/activate && uv sync --active` so `venvtext2sql` matches the locked project state.
+- Synced the uv-managed project environment with `uv sync` so the launcher fallback path using `.venv` also has `plotly` available.
+- Validation:
+  - `venvtext2sql/bin/python -c "import plotly; print(plotly.__version__)"` -> `6.7.0`.
+  - `.venv/bin/python -c "import plotly; print(plotly.__version__)"` -> `6.7.0`.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/ui/test_renderers.py tests/text_to_sql_agent/ui/test_handlers.py` -> 8 passed.
+  - `venvtext2sql/bin/ruff check src/text_to_sql_agent/ui/chainlit_app.py tests/text_to_sql_agent/ui/test_chainlit_app.py` -> all checks passed.
+
+### T-2026-05-19-056 - Prevent Chainlit chart rendering from blocking exports
+
+- Reproduced the runtime failure from the Chainlit action callback trace: `cl.Plotly(...)` raised `ModuleNotFoundError: No module named 'plotly'`.
+- Verified root cause: chart rendering happened before export actions were sent, so the exception aborted `_render_query_result()` and the export buttons never appeared.
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py`:
+  - Added `_build_chart_elements()` helper to isolate optional chart element creation.
+  - Gracefully skip chart rendering when `plotly` is not installed instead of failing the whole response.
+  - Kept the rest of the result rendering flow unchanged so insight and export actions are still sent.
+- Added `tests/text_to_sql_agent/ui/test_chainlit_app.py` covering empty-chart and missing-`plotly` fallback behavior.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/ui/test_renderers.py tests/text_to_sql_agent/ui/test_handlers.py` -> 8 passed.
+  - `venvtext2sql/bin/ruff check src/text_to_sql_agent/ui/chainlit_app.py tests/text_to_sql_agent/ui/test_chainlit_app.py` -> all checks passed.
+
+### T-2026-05-19-055 - Fix Chainlit export actions visibility
+
+- Diagnosed issue: Export action buttons (CSV/JSON) not visible on web UI after query execution.
+- Root cause: Export actions were sent as a separate message below the insight, making them easy to miss.
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py`:
+  - Modified `_render_query_result()` function to merge export actions into the insight message.
+  - When insight exists: append export actions to the insight message.
+  - When no insight: send export actions in a standalone message with "Export results:" label.
+- Result: Export buttons now appear directly with the insight, improving discoverability and reducing message clutter.
+- Validation:
+  - Code changes reviewed for Chainlit message API compliance.
+  - No new tests required; existing export callbacks remain unchanged.
 
 ### T-2026-05-19-054 - Fix Chainlit app import path in uv runtime
 
