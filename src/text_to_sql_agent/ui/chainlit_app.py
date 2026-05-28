@@ -5,6 +5,11 @@ from __future__ import annotations
 import os
 from uuid import uuid4
 
+from text_to_sql_agent.ui.auth_callbacks import (
+    authenticate_with_password,
+    build_auth_service_from_env,
+    make_chainlit_user,
+)
 from text_to_sql_agent.ui.handlers import (
     QueryTurnResult,
     build_export_files,
@@ -23,6 +28,16 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - tested through import without chainlit
     cl = None
 
+# Auth service is built once at module level and shared across requests.
+_auth_service = None
+
+
+def _get_auth_service():
+    global _auth_service
+    if _auth_service is None:
+        _auth_service = build_auth_service_from_env()
+    return _auth_service
+
 
 def _connection_config_from_env() -> dict | None:
     sqlite_path = os.getenv("SQLITE_PATH") or os.getenv("DB_PATH")
@@ -37,6 +52,25 @@ def _get_runtime():
         runtime = build_ui_runtime(connection_config=_connection_config_from_env())
         cl.user_session.set("runtime", runtime)
     return runtime
+
+
+def _resolve_authenticated_identity() -> tuple[str, str, str]:
+    """Resolve `(user_id, username, display_name)` from Chainlit session user."""
+    session_user = cl.user_session.get("user")
+    if session_user is None:
+        return ("anonymous", "anonymous", "Anonymous")
+
+    user_id = str(getattr(session_user, "identifier", "") or "").strip() or "anonymous"
+    metadata = getattr(session_user, "metadata", {}) or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    username = str(metadata.get("username") or user_id).strip() or user_id
+    display_name = (
+        str(getattr(session_user, "display_name", "") or metadata.get("display_name") or username)
+        .strip()
+        or username
+    )
+    return (user_id, username, display_name)
 
 
 async def _render_sql_approval(turn: QueryTurnResult) -> None:
@@ -107,10 +141,28 @@ async def _render_query_result(state: dict) -> None:
 
 if cl is not None:
 
+    @cl.password_auth_callback
+    async def password_auth_callback(username: str, password: str):
+        """Authenticate the user via username/password using AuthService.
+
+        Returns a ``cl.User`` on success, ``None`` to reject the login.
+        The Chainlit framework shows an error message automatically when
+        ``None`` is returned.
+        """
+        principal = await authenticate_with_password(
+            username, password, _get_auth_service()
+        )
+        if principal is None:
+            return None
+        return make_chainlit_user(principal)
+
     @cl.on_chat_start
     async def on_chat_start() -> None:
         _get_runtime()
-        cl.user_session.set("user_id", f"user-{uuid4().hex[:8]}")
+        user_id, username, display_name = _resolve_authenticated_identity()
+        cl.user_session.set("user_id", user_id)
+        cl.user_session.set("username", username)
+        cl.user_session.set("display_name", display_name)
         cl.user_session.set("conversation_id", f"conv-{uuid4().hex}")
         cl.user_session.set("pending_thread_id", None)
         cl.user_session.set("awaiting_edit_sql", False)
@@ -118,7 +170,8 @@ if cl is not None:
 
         await cl.Message(
             content=(
-                "DB assistant is ready. Ask a natural-language question and I will "
+                f"DB assistant is ready, {display_name}. "
+                "Ask a natural-language question and I will "
                 "show SQL preview before execution."
             )
         ).send()

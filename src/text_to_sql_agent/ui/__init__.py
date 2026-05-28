@@ -2,6 +2,11 @@
 
 __version__ = "0.1.0"
 
+from .auth_callbacks import (
+    authenticate_with_password,
+    build_auth_service_from_env,
+    make_chainlit_user,
+)
 from .handlers import (
     QueryTurnResult,
     UiRuntime,
@@ -13,6 +18,9 @@ from .handlers import (
 from .renderers import build_plotly_figure, render_markdown_table, render_sql_preview
 
 __all__ = [
+    "authenticate_with_password",
+    "build_auth_service_from_env",
+    "make_chainlit_user",
     "QueryTurnResult",
     "UiRuntime",
     "build_export_files",

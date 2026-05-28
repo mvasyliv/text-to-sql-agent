@@ -9,11 +9,16 @@ from .vector_store_repository import VectorStoreRepository
 from .sqlite_provider import SQLiteIntrospectionProvider
 from .postgresql_provider import PostgresIntrospectionProvider
 from .session_repository import InMemorySessionRepository, SessionRepository
+from .sqlite_auth_repository import SQLiteAuthRepository
+from .sqlite_session_repository import SQLiteSessionRepository
 from .query_execution_repository import QueryExecutionRepository
 from .sqlite_query_execution_repository import SQLiteQueryExecutionRepository
 from .query_execution_factory import get_query_execution_repository
 
 __all__ = [
+    "bootstrap_schema",
+    "get_connection",
+    "managed_connection",
     "SchemaIntrospectionProvider",
     "PROVIDER_REGISTRY",
     "get_introspection_provider",
@@ -24,6 +29,8 @@ __all__ = [
     "PostgresIntrospectionProvider",
     "InMemorySessionRepository",
     "SessionRepository",
+    "SQLiteAuthRepository",
+    "SQLiteSessionRepository",
     "QueryExecutionRepository",
     "SQLiteQueryExecutionRepository",
     "get_query_execution_repository",

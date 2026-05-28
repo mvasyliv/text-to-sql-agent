@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Mapping, MutableMapping
 
 from dotenv import dotenv_values
+from pydantic import BaseModel, Field
 
 from text_to_sql_agent.config.secrets import (
     AwsSecretsManagerProvider,
@@ -14,6 +15,45 @@ from text_to_sql_agent.config.secrets import (
     SecretResolutionResult,
     resolve_secret_placeholders,
 )
+
+
+class ConversationAuthSettings(BaseModel):
+    """Settings used by conversation persistence and username/password auth."""
+
+    conversation_db_path: str = Field(
+        default="conversation.db",
+        description="SQLite database path used for conversation/auth persistence.",
+    )
+    auth_auto_register_on_first_login: bool = Field(
+        default=True,
+        description="When true, first successful login attempt creates a user account.",
+    )
+    auth_min_password_length: int = Field(
+        default=8,
+        ge=4,
+        description="Minimum allowed password length for registration.",
+    )
+
+
+def load_conversation_auth_settings(env: Mapping[str, str] | None = None) -> ConversationAuthSettings:
+    """Load conversation DB path and auth policy flags from environment variables."""
+    values = env if env is not None else os.environ
+    return ConversationAuthSettings(
+        conversation_db_path=(
+            values.get("CONVERSATION_DB_PATH")
+            or values.get("CONVERSATION_DB")
+            or "conversation.db"
+        ).strip(),
+        auth_auto_register_on_first_login=_parse_env_bool(
+            values.get("AUTH_AUTO_REGISTER_ON_FIRST_LOGIN"),
+            default=True,
+        ),
+        auth_min_password_length=_parse_env_int(
+            values.get("AUTH_MIN_PASSWORD_LENGTH"),
+            default=8,
+            minimum=4,
+        ),
+    )
 
 
 def load_runtime_environment(
@@ -78,6 +118,30 @@ def _load_environment_values(root_path: Path, environment: str) -> dict[str, str
         values.update(_read_env_file(env_file))
 
     return values
+
+
+def _parse_env_bool(raw: str | None, *, default: bool) -> bool:
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _parse_env_int(raw: str | None, *, default: int, minimum: int | None = None) -> int:
+    if raw is None:
+        value = default
+    else:
+        try:
+            value = int(raw.strip())
+        except ValueError:
+            value = default
+    if minimum is not None and value < minimum:
+        return minimum
+    return value
 
 
 def _environment_file_name(environment: str) -> str:

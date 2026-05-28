@@ -54,6 +54,10 @@ class Conversation(BaseModel):
         default=None,
         description="Optional short title derived from the first user message.",
     )
+    graph_thread_id: str | None = Field(
+        default=None,
+        description="Optional persisted LangGraph thread id for resume continuity.",
+    )
     created_at: datetime = Field(
         default_factory=_utcnow,
         description="Timestamp when the conversation was started.",

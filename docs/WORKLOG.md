@@ -7,6 +7,164 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+
+## 2026-05-28
+
+### T-2026-05-28-075 - Persist graph thread id per conversation
+
+- Added `graph_thread_id` to `Conversation` in `src/text_to_sql_agent/models/session.py`.
+- Updated `src/text_to_sql_agent/repositories/sqlite_session_repository.py`:
+  - persists `graph_thread_id` in conversation upsert,
+  - updates `graph_thread_id` on conflict,
+  - hydrates `graph_thread_id` from DB rows.
+- Updated `src/text_to_sql_agent/ui/handlers.py`:
+  - added `_resolve_thread_id(...)` to reuse explicit thread id first, then persisted conversation thread id, then generate a new one.
+  - `start_query_turn(...)` now resolves thread id before conversation ensure and persists it through `_ensure_user_and_conversation(...)`.
+  - `_ensure_user_and_conversation(...)` now updates existing conversation with new `graph_thread_id` when needed.
+- Added/updated tests:
+  - `tests/text_to_sql_agent/models/test_session.py` for `graph_thread_id` default and serialization.
+  - `tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py` for graph thread id roundtrip/update.
+  - `tests/text_to_sql_agent/ui/test_handlers.py` for thread id reuse and explicit thread id persistence.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/models/test_session.py tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py tests/text_to_sql_agent/ui/test_handlers.py -q` → 43 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/ tests/text_to_sql_agent/ui/ -q` → 158 passed.
+
+### T-2026-05-28-074 - Add conversation history service with ownership checks
+
+- Added `src/text_to_sql_agent/services/conversation_history_service.py`:
+  - `ConversationHistoryService.list_user_conversations(user_id)` for user-scoped listing.
+  - `ConversationHistoryService.load_user_conversation(user_id, conversation_id)` with strict ownership checks before message loading.
+  - `ConversationAccessError` for denied/missing conversation access.
+  - `ConversationHistoryRecord` dataclass for returning conversation + messages together.
+- Updated `src/text_to_sql_agent/services/__init__.py`:
+  - Fixed missing auth-service imports (`AuthError`, `AuthResult`, `AuthService`, `hash_password`, `verify_password`).
+  - Exported conversation-history service symbols.
+- Added `tests/text_to_sql_agent/services/test_conversation_history_service.py` with focused tests for:
+  - listing only user-owned conversations,
+  - loading owned conversation with messages,
+  - rejecting cross-user access,
+  - handling missing conversation IDs.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/services/test_conversation_history_service.py tests/text_to_sql_agent/services/test_auth_service.py -q` → 23 passed.
+
+### T-2026-05-28-073 - Wire authenticated user into Chainlit session state
+
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py` to replace random user IDs with authenticated identity from Chainlit session user:
+  - Added `_resolve_authenticated_identity()` to read `cl.user_session.get("user")` and map `(identifier, metadata.username, display_name)` into `(user_id, username, display_name)`.
+  - `on_chat_start` now stores `user_id`, `username`, and `display_name` in session state from authenticated principal data.
+  - Added a safe fallback identity (`anonymous`) for runtime resilience when session user is unavailable.
+  - Updated welcome message to include resolved display name.
+- Added focused tests in `tests/text_to_sql_agent/ui/test_chainlit_app.py` for:
+  - identity resolution from session user,
+  - safe fallback behavior when no authenticated user exists.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_app.py tests/text_to_sql_agent/ui/test_auth_callbacks.py -q` → 14 passed.
+
+### T-2026-05-28-072 - Add Chainlit password login callback
+
+- Created `src/text_to_sql_agent/ui/auth_callbacks.py`:
+  - `build_auth_service_from_env(settings=None)` — wires `AuthService` to the conversation SQLite DB using env-loaded settings. Accepts explicit settings override for tests.
+  - `authenticate_with_password(username, password, auth_service)` — pure async function (no Chainlit import), returns `AuthPrincipal | None`. Used as test-friendly core of the password auth callback.
+  - `make_chainlit_user(principal)` — lazy Chainlit import, converts `AuthPrincipal` to `cl.User(identifier, display_name, metadata)`.
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py`:
+  - Added module-level `_get_auth_service()` singleton factory.
+  - Registered `@cl.password_auth_callback` that calls `authenticate_with_password` and `make_chainlit_user`, returning `None` on failure.
+- Exported auth callback functions from `src/text_to_sql_agent/ui/__init__.py`.
+- Added 8 focused tests in `tests/text_to_sql_agent/ui/test_auth_callbacks.py` covering: valid first login, wrong password, unknown user (auto-register OFF), inactive account, stable user_id on re-login, multi-user isolation, factory returns correct type and is functional.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_auth_callbacks.py -q` → 8 passed.
+
+### T-2026-05-28-071 - Implement auth service register or login policy
+
+- Added `argon2-cffi` dependency via `uv add argon2-cffi` and synced into `venvtext2sql` via `uv sync --active`.
+- Created `src/text_to_sql_agent/services/auth_service.py`:
+  - `hash_password(plain)` — Argon2id hashing with random salt.
+  - `verify_password(plain, hash)` — safe verification, returns bool.
+  - `AuthError` — exception for all auth failures.
+  - `AuthResult` — frozen dataclass with `principal: AuthPrincipal` and `registered: bool`.
+  - `AuthService.authenticate_or_register(login)` — auto-register-or-authenticate depending on `settings.auth_auto_register_on_first_login`. Rejects wrong password, inactive accounts, short passwords.
+  - `AuthService.register(registration)` — explicit registration; fails on duplicate username or short password.
+- Exported `AuthError`, `AuthResult`, `AuthService`, `hash_password`, `verify_password` from `src/text_to_sql_agent/services/__init__.py`.
+- Added 19 focused tests in `tests/text_to_sql_agent/services/test_auth_service.py`:
+  - password helpers (hash, verify, uniqueness),
+  - register (display name, duplicate, short password),
+  - authenticate-or-register auto ON/OFF,
+  - inactive account, multi-user isolation.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/services/test_auth_service.py -v` → 19 passed.
+
+### T-2026-05-28-070 - Implement SQLite auth repository
+
+- Created `src/text_to_sql_agent/repositories/sqlite_auth_repository.py` with `SQLiteAuthRepository`:
+  - `create_account(account)` — INSERT with `ValueError` on duplicate username or user_id.
+  - `get_by_username(username)` — SELECT by unique username, returns `UserAccount | None`.
+  - `get_by_user_id(user_id)` — SELECT by primary key, returns `UserAccount | None`.
+  - `username_exists(username)` — fast existence check.
+  - `update_password_hash(user_id, new_hash)` — UPDATE with `updated_at` refresh, raises on missing user.
+  - `set_active(user_id, is_active)` — toggle is_active, raises on missing user.
+- Exported `SQLiteAuthRepository` from `src/text_to_sql_agent/repositories/__init__.py`.
+- Added 17 focused tests in `tests/text_to_sql_agent/repositories/test_sqlite_auth_repository.py`.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_sqlite_auth_repository.py -v` → 17 passed.
+
+### T-2026-05-28-069 - Implement SQLite session repository
+
+- Created `src/text_to_sql_agent/repositories/sqlite_session_repository.py` with `SQLiteSessionRepository`:
+  - `save_user(user)` — INSERT OR IGNORE to `users` table using `user_id` as username placeholder (does not overwrite auth-created records).
+  - `get_user(user_id)` — SELECT from `users` table, returns `User` or `None`.
+  - `save_conversation(conv)` — upsert with ON CONFLICT DO UPDATE for title, is_active, metadata_json, updated_at.
+  - `get_conversation(id)` — SELECT with metadata JSON deserialization.
+  - `list_conversations(user_id)` — filtered by user, ordered by `updated_at DESC`.
+  - `append_message(msg)` — INSERT OR IGNORE to avoid duplicates.
+  - `list_messages(conv_id)` — ordered by `created_at ASC`.
+- Also updated `conversation_db.py` schema to add `metadata_json` column to `conversations` table.
+- Exported `SQLiteSessionRepository` from `src/text_to_sql_agent/repositories/__init__.py`.
+- Added 18 focused tests in `tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py`:
+  - user save/get/idempotency/non-overwrite,
+  - conversation CRUD, user isolation, ordering,
+  - message ordering, metadata roundtrip, deduplication, role preservation.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py -v` → 18 passed.
+
+### T-2026-05-28-068 - Add conversation database schema bootstrap
+
+- Created `src/text_to_sql_agent/repositories/conversation_db.py`:
+  - `bootstrap_schema(db_path)` — idempotent DDL runner that creates `users`, `conversations`, `messages` tables plus indexes and FK constraints. Creates parent directories automatically.
+  - `get_connection(db_path)` — opens `sqlite3.Connection` with `row_factory = sqlite3.Row` and foreign-key enforcement ON.
+  - `managed_connection(db_path)` — context manager wrapping `get_connection`.
+- Exported the three public symbols from `src/text_to_sql_agent/repositories/__init__.py`.
+- Added 12 focused tests in `tests/text_to_sql_agent/repositories/test_conversation_db.py`:
+  - table creation, idempotency, parent directory creation, index existence,
+  - username uniqueness constraint, FK enforcement on conversations.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_conversation_db.py -v` → 12 passed.
+
+### T-2026-05-28-067 - Add auth models for username password flow
+
+- Created `src/text_to_sql_agent/models/auth.py` with four models:
+  - `UserAccount` — persisted DB record with `user_id`, `username`, `password_hash`, `display_name`, `is_active`, timestamps.
+  - `UserRegistration` — registration payload with `field_validator` for username strip and display_name fallback.
+  - `UserLogin` — login payload with username strip.
+  - `AuthPrincipal` — identity returned after login (no password hash), with `from_account()` factory.
+- Exported all four models from `src/text_to_sql_agent/models/__init__.py`.
+- Added 17 focused tests in `tests/text_to_sql_agent/models/test_auth.py` covering required fields, defaults, validators, factories, and error cases.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/models/test_auth.py -v` → 17 passed.
+
+### T-2026-05-28-066 - Add conversation DB settings in config
+
+- Added conversation/auth settings contract in `src/text_to_sql_agent/config/settings.py`:
+  - `ConversationAuthSettings` with `conversation_db_path`, `auth_auto_register_on_first_login`, and `auth_min_password_length`.
+  - `load_conversation_auth_settings(env=None)` environment loader with safe defaults.
+  - Internal env parsing helpers for booleans and bounded integers.
+- Exported the new settings API from `src/text_to_sql_agent/config/__init__.py`.
+- Added focused tests in `tests/text_to_sql_agent/config/test_conversation_auth_settings.py` for:
+  - defaults,
+  - explicit env overrides,
+  - normalization of invalid values.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/config/test_conversation_auth_settings.py tests/text_to_sql_agent/config/test_settings_runtime.py` -> 7 passed.
+
 ## 2026-05-26
 
 ### T-2026-05-26-065 - Load LLM API key from secrets in Chainlit launcher

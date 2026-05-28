@@ -9,8 +9,22 @@ from .query_result_export import export_query_result
 from .query_analytics import QueryAnalyticsResult, build_one_shot_chart
 from .query_insights import QueryInsightResult, build_query_insight
 from .audit_trail import build_audit_trail, make_agent_event
+from .auth_service import AuthError, AuthResult, AuthService, hash_password, verify_password
+from .conversation_history_service import (
+    ConversationAccessError,
+    ConversationHistoryRecord,
+    ConversationHistoryService,
+)
 
 __all__ = [
+    "AuthError",
+    "AuthResult",
+    "AuthService",
+    "hash_password",
+    "verify_password",
+    "ConversationAccessError",
+    "ConversationHistoryRecord",
+    "ConversationHistoryService",
     "build_snapshot_id",
     "build_schema_documents",
     "index_schema_embeddings",

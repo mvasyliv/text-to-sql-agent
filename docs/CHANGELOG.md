@@ -4,6 +4,73 @@ All notable changes to this project will be documented in this file.
 
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
+
+## 2026-05-28
+
+### Added
+
+- Added persistent LangGraph thread-id tracking per conversation (T-2026-05-28-075):
+  - Extended `Conversation` model with optional `graph_thread_id` in `src/text_to_sql_agent/models/session.py`.
+  - Updated `src/text_to_sql_agent/repositories/sqlite_session_repository.py` to persist and hydrate `graph_thread_id`.
+  - Updated `src/text_to_sql_agent/ui/handlers.py` to reuse persisted thread IDs for existing conversations and to persist explicit thread overrides.
+  - Added focused tests in `tests/text_to_sql_agent/models/test_session.py`, `tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py`, and `tests/text_to_sql_agent/ui/test_handlers.py`.
+
+- Added conversation history service with strict ownership validation (T-2026-05-28-074):
+  - New `src/text_to_sql_agent/services/conversation_history_service.py` with `ConversationHistoryService`, `ConversationAccessError`, and `ConversationHistoryRecord`.
+  - `load_user_conversation()` now verifies that the requested conversation belongs to the requesting user before returning messages.
+  - Exported via `src/text_to_sql_agent/services/__init__.py`.
+  - Added focused tests in `tests/text_to_sql_agent/services/test_conversation_history_service.py`.
+
+- Wired authenticated user identity into Chainlit session state (T-2026-05-28-073):
+  - Updated `src/text_to_sql_agent/ui/chainlit_app.py` to resolve `user_id`, `username`, and `display_name` from `cl.user_session.get("user")` instead of generating random user IDs.
+  - Added `_resolve_authenticated_identity()` helper with safe fallback values when session user metadata is unavailable.
+  - Updated chat-start session initialization to persist resolved identity fields for downstream UI/runtime logic.
+  - Added focused tests in `tests/text_to_sql_agent/ui/test_chainlit_app.py`.
+
+- Added Chainlit password auth callback integration (T-2026-05-28-072):
+  - New `src/text_to_sql_agent/ui/auth_callbacks.py` with `build_auth_service_from_env()`, `authenticate_with_password()`, `make_chainlit_user()`.
+  - Registered `@cl.password_auth_callback` in `src/text_to_sql_agent/ui/chainlit_app.py`; returns `cl.User` on success, `None` to reject.
+  - Core auth logic (`authenticate_with_password`) is Chainlit-free for testability.
+  - Exported from `src/text_to_sql_agent/ui/__init__.py`. 8 tests pass.
+
+- Added auth service with register-or-login policy and Argon2id password hashing (T-2026-05-28-071):
+  - New `src/text_to_sql_agent/services/auth_service.py` with `AuthService`, `AuthError`, `AuthResult`, `hash_password()`, `verify_password()`.
+  - `authenticate_or_register()` supports auto-register-on-first-login (env-driven), wrong-password rejection, and inactive-account blocking.
+  - `register()` for explicit registration with duplicate-username and min-length enforcement.
+  - Added `argon2-cffi` to project dependencies (`pyproject.toml`, `uv.lock`).
+  - Exported from `src/text_to_sql_agent/services/__init__.py`. 19 tests pass.
+
+- Added SQLite auth repository for user account persistence (T-2026-05-28-070):
+  - New `SQLiteAuthRepository` in `src/text_to_sql_agent/repositories/sqlite_auth_repository.py`.
+  - Supports account creation (raises `ValueError` on duplicate username/user_id), lookup by username and user_id, username existence check, password hash update, and account activation toggle.
+  - Exported from `src/text_to_sql_agent/repositories/__init__.py`. 17 tests pass.
+
+- Added persistent SQLite session repository (T-2026-05-28-069):
+  - New `SQLiteSessionRepository` in `src/text_to_sql_agent/repositories/sqlite_session_repository.py` replaces volatile in-memory session storage.
+  - Supports user upsert (INSERT OR IGNORE), conversation save/update/list with user-scoped isolation, and message append/list with ordering by `created_at`.
+  - JSON roundtrip for `metadata` fields on both conversations and messages.
+  - Updated `conversation_db.py` schema to add `metadata_json` column to `conversations` table.
+  - Exported from `src/text_to_sql_agent/repositories/__init__.py`. 18 tests pass.
+
+- Added conversation database bootstrap module (T-2026-05-28-068):
+  - New `src/text_to_sql_agent/repositories/conversation_db.py` with `bootstrap_schema()`, `get_connection()`, `managed_connection()`.
+  - Schema: `users` (unique username, password_hash), `conversations` (FK to users, graph_thread_id), `messages` (FK to conversations) with appropriate indexes.
+  - Idempotent — safe to call on every startup. Auto-creates parent directories.
+  - Exported from `src/text_to_sql_agent/repositories/__init__.py`. 12 tests pass.
+
+- Added auth-facing Pydantic models for username/password flow (T-2026-05-28-067):
+  - Introduced `UserAccount`, `UserRegistration`, `UserLogin`, `AuthPrincipal` in `src/text_to_sql_agent/models/auth.py`.
+  - `UserRegistration` validates and strips username, enforces min-length for both fields, and resolves display name from username when blank.
+  - `AuthPrincipal.from_account()` builds a safe identity object (no password hash) from a persisted `UserAccount`.
+  - Exported from `src/text_to_sql_agent/models/__init__.py`.
+  - Added 17 focused tests in `tests/text_to_sql_agent/models/test_auth.py`.
+
+- Added conversation/auth runtime settings loader for upcoming persistent chat history work (T-2026-05-28-066):
+  - Introduced `ConversationAuthSettings` and `load_conversation_auth_settings()` in `src/text_to_sql_agent/config/settings.py`.
+  - Added environment-driven settings for `CONVERSATION_DB_PATH`, `AUTH_AUTO_REGISTER_ON_FIRST_LOGIN`, and `AUTH_MIN_PASSWORD_LENGTH`.
+  - Exported the new settings API from `src/text_to_sql_agent/config/__init__.py`.
+  - Added focused config coverage in `tests/text_to_sql_agent/config/test_conversation_auth_settings.py`.
+
 ## 2026-05-26
 
 ### Added

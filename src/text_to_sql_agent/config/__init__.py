@@ -15,7 +15,11 @@ from text_to_sql_agent.config.secrets import (
     SecretResolutionResult,
     resolve_secret_placeholders,
 )
-from text_to_sql_agent.config.settings import load_runtime_environment
+from text_to_sql_agent.config.settings import (
+    ConversationAuthSettings,
+    load_conversation_auth_settings,
+    load_runtime_environment,
+)
 
 __all__ = [
     "AwsSecretsManagerProvider",
@@ -24,6 +28,8 @@ __all__ = [
     "PLACEHOLDER_VALUE",
     "SecretResolutionError",
     "SecretResolutionResult",
+    "ConversationAuthSettings",
+    "load_conversation_auth_settings",
     "load_runtime_environment",
     "setup_logging",
     "get_logger",

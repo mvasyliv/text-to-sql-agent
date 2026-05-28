@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -13,6 +14,10 @@ from text_to_sql_agent.graphs import build_query_graph
 from text_to_sql_agent.models.session import ChatMessage, Conversation, MessageRole, User
 from text_to_sql_agent.repositories.session_repository import InMemorySessionRepository, SessionRepository
 from text_to_sql_agent.services import export_query_result
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,11 +67,17 @@ def start_query_turn(
     thread_id: str | None = None,
 ) -> QueryTurnResult:
     """Start a new graph turn and return intermediate state."""
+    resolved_thread_id = _resolve_thread_id(
+        runtime.session_repository,
+        conversation_id=conversation_id,
+        explicit_thread_id=thread_id,
+    )
     _ensure_user_and_conversation(
         runtime.session_repository,
         user_id=user_id,
         conversation_id=conversation_id,
         title=user_question,
+        graph_thread_id=resolved_thread_id,
     )
     _append_message(
         runtime.session_repository,
@@ -75,7 +86,6 @@ def start_query_turn(
         content=user_question,
     )
 
-    resolved_thread_id = thread_id or f"thread-{uuid4().hex}"
     state = _initial_query_state(
         user_id=user_id,
         conversation_id=conversation_id,
@@ -203,19 +213,45 @@ def _ensure_user_and_conversation(
     user_id: str,
     conversation_id: str,
     title: str,
+    graph_thread_id: str,
 ) -> None:
     if repository.get_user(user_id) is None:
         repository.save_user(User(user_id=user_id, display_name=user_id))
 
-    if repository.get_conversation(conversation_id) is None:
+    existing = repository.get_conversation(conversation_id)
+    if existing is None:
         repository.save_conversation(
             Conversation(
                 conversation_id=conversation_id,
                 user_id=user_id,
                 title=title.strip()[:80] or "DB assistant conversation",
+                graph_thread_id=graph_thread_id,
                 metadata={"source": "chainlit"},
             )
         )
+        return
+
+    if existing.graph_thread_id != graph_thread_id:
+        repository.save_conversation(
+            existing.model_copy(update={"graph_thread_id": graph_thread_id, "updated_at": _utcnow()})
+        )
+
+
+def _resolve_thread_id(
+    repository: SessionRepository,
+    *,
+    conversation_id: str,
+    explicit_thread_id: str | None,
+) -> str:
+    """Resolve thread id from explicit value, persisted conversation, or new UUID."""
+    if explicit_thread_id:
+        return explicit_thread_id
+
+    conversation = repository.get_conversation(conversation_id)
+    if conversation is not None and conversation.graph_thread_id:
+        return conversation.graph_thread_id
+
+    return f"thread-{uuid4().hex}"
 
 
 def _append_message(

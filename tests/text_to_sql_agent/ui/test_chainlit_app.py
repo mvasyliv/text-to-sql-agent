@@ -119,3 +119,43 @@ def test_render_sql_approval_shows_llm_notice(monkeypatch):
     assert "LLM is unavailable right now." in sent_messages[0]
     assert "Proposed SQL query:" in sent_messages[0]
     assert "Generation mode: **Few-shot fallback**" in sent_messages[0]
+
+
+def test_resolve_authenticated_identity_from_session_user(monkeypatch):
+    class SessionStub:
+        @staticmethod
+        def get(key: str):
+            if key == "user":
+                return type(
+                    "UserStub",
+                    (),
+                    {
+                        "identifier": "u-123",
+                        "display_name": "Alice",
+                        "metadata": {"username": "alice"},
+                    },
+                )()
+            return None
+
+    class ChainlitStub:
+        user_session = SessionStub()
+
+    monkeypatch.setattr(chainlit_app, "cl", ChainlitStub)
+    assert chainlit_app._resolve_authenticated_identity() == ("u-123", "alice", "Alice")
+
+
+def test_resolve_authenticated_identity_uses_safe_defaults(monkeypatch):
+    class SessionStub:
+        @staticmethod
+        def get(key: str):
+            return None
+
+    class ChainlitStub:
+        user_session = SessionStub()
+
+    monkeypatch.setattr(chainlit_app, "cl", ChainlitStub)
+    assert chainlit_app._resolve_authenticated_identity() == (
+        "anonymous",
+        "anonymous",
+        "Anonymous",
+    )

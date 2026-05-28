@@ -2,6 +2,12 @@
 
 __version__ = "0.0.1"
 
+from .auth import (
+    AuthPrincipal,
+    UserAccount,
+    UserLogin,
+    UserRegistration,
+)
 from .document import (
     SchemaDocument,
     SchemaEmbeddingRecord,
@@ -37,6 +43,10 @@ from .trace import (
 )
 
 __all__ = [
+    "AuthPrincipal",
+    "UserAccount",
+    "UserLogin",
+    "UserRegistration",
     "ColumnSchema",
     "DatabaseSchema",
     "ForeignKeySchema",

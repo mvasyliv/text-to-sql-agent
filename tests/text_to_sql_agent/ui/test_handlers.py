@@ -73,3 +73,39 @@ def test_start_query_turn_propagates_selected_tables():
     )
 
     assert turn.state["selected_tables"] == ["users"]
+
+
+def test_start_query_turn_reuses_persisted_graph_thread_id():
+    runtime = build_ui_runtime()
+    first = start_query_turn(
+        runtime,
+        user_id="u-001",
+        conversation_id="c-004",
+        user_question="How many users?",
+    )
+
+    second = start_query_turn(
+        runtime,
+        user_id="u-001",
+        conversation_id="c-004",
+        user_question="And how many active users?",
+    )
+
+    assert second.thread_id == first.thread_id
+
+
+def test_start_query_turn_persists_explicit_thread_id():
+    runtime = build_ui_runtime()
+    turn = start_query_turn(
+        runtime,
+        user_id="u-001",
+        conversation_id="c-005",
+        user_question="How many users?",
+        thread_id="thread-explicit",
+    )
+
+    conversation = runtime.session_repository.get_conversation("c-005")
+    assert turn.thread_id == "thread-explicit"
+    assert conversation is not None
+    assert conversation.graph_thread_id == "thread-explicit"
+

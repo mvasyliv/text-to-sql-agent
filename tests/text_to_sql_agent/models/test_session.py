@@ -34,6 +34,7 @@ class TestConversation:
         assert conv.conversation_id == "c-001"
         assert conv.user_id == "u-001"
         assert conv.title is None
+        assert conv.graph_thread_id is None
         assert conv.is_active is True
         assert conv.metadata == {}
 
@@ -51,7 +52,12 @@ class TestConversation:
         assert conv.metadata["db_id"] == "mydb"
 
     def test_serialization_roundtrip(self):
-        conv = Conversation(conversation_id="c-004", user_id="u-001", title="Test run")
+        conv = Conversation(
+            conversation_id="c-004",
+            user_id="u-001",
+            title="Test run",
+            graph_thread_id="thread-123",
+        )
         assert Conversation.model_validate(conv.model_dump()) == conv
 
 
