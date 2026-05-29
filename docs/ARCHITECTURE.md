@@ -3,9 +3,9 @@
 This document is the living reference for the architecture of the text-to-SQL agent.
 
 Current repository status:
-- The package structure is defined.
-- The implementation is still minimal.
-- This document therefore describes the target architecture the codebase is expected to follow as development continues.
+- Core request orchestration and Chainlit UI flow are implemented.
+- User authentication and persistent conversation history are implemented over the conversation SQLite database.
+- This document describes the current architecture and the intended boundaries for future changes.
 
 ## Goal
 
@@ -38,6 +38,11 @@ Its responsibilities are:
 - initialize services and graph or agent objects
 - accept the runtime input channel
 - hand off control to the application layer
+
+Current runtime entrypoints:
+- `main_chainlit.py` launches Chainlit web runtime.
+- `main_terminal.py` provides terminal-mode interaction and schema shortcuts.
+- `src/text_to_sql_agent/ui/chainlit_app.py` contains Chainlit callback wiring.
 
 ### Agents Layer
 
@@ -84,6 +89,10 @@ Typical responsibilities:
 
 Services may call repositories and prompt builders, but should avoid owning UI or CLI concerns.
 
+Current auth/history services:
+- `AuthService` (`src/text_to_sql_agent/services/auth_service.py`) owns register-or-login policy, Argon2 password hashing/verification, and account activity checks.
+- `ConversationHistoryService` (`src/text_to_sql_agent/services/conversation_history_service.py`) is the read boundary for history with strict owner validation.
+
 ### Repositories Layer
 
 `src/text_to_sql_agent/repositories/`
@@ -98,6 +107,11 @@ Expected responsibilities:
 - centralize low-level data access error handling
 
 This boundary is important because it creates a single place for execution controls and auditing.
+
+Current auth/history repositories:
+- `SQLiteAuthRepository` persists accounts in `users` and provides username/user-id lookup, password-hash updates, and active-flag updates.
+- `SQLiteSessionRepository` persists user/session conversation state (`users`, `conversations`, `messages`) and message history ordering.
+- `conversation_db.bootstrap_schema()` initializes the auth/history schema and indices.
 
 ### Models Layer
 
@@ -151,6 +165,71 @@ Expected responsibilities:
 
 Configuration should come from the environment or explicit settings objects, not from hardcoded values.
 
+Current auth/history configuration keys:
+- `CONVERSATION_DB_PATH`
+- `AUTH_AUTO_REGISTER_ON_FIRST_LOGIN`
+- `AUTH_MIN_PASSWORD_LENGTH`
+
+These are loaded through `load_conversation_auth_settings()`.
+
+## Auth and User-Scoped History Architecture
+
+The web runtime uses username/password authentication with user-isolated history.
+
+### Auth Flow
+
+1. Chainlit calls `@cl.password_auth_callback` in `src/text_to_sql_agent/ui/chainlit_app.py`.
+2. Callback delegates to `authenticate_with_password()` in `src/text_to_sql_agent/ui/auth_callbacks.py`.
+3. `AuthService.authenticate_or_register()` validates credentials (or auto-registers if enabled).
+4. On success, callback returns a `cl.User` containing stable `identifier` (`user_id`) and `metadata.username`.
+5. On failure, callback returns `None`, and login is rejected.
+
+### Conversation Persistence Model
+
+Auth and history share one SQLite database (`conversation` DB path):
+
+- `users`
+  - auth identity (`user_id`, `username`, `password_hash`, `is_active`)
+  - display metadata and timestamps
+- `conversations`
+  - `conversation_id`, owner `user_id`, title, optional `graph_thread_id`, metadata, timestamps
+- `messages`
+  - message role/content/metadata with ordered timestamps per conversation
+
+This model supports:
+- stable user identity across sessions,
+- explicit conversation ownership,
+- durable resume of message history and graph thread continuity.
+
+### Ownership and Access Boundaries
+
+User isolation is enforced at service boundary:
+
+- listing: `ConversationHistoryService.list_user_conversations(user_id)` uses user-scoped repository list,
+- loading: `ConversationHistoryService.load_user_conversation(user_id, conversation_id)` verifies `conversation.user_id == user_id`,
+- violation path: raises `ConversationAccessError` and UI returns a safe denial message.
+
+The Chainlit UI does not directly bypass these checks when opening saved conversations.
+
+### Chainlit History UX Flow
+
+On chat start (`@cl.on_chat_start`):
+- session stores authenticated identity (`user_id`, `username`, `display_name`),
+- initializes a fresh active `conversation_id`,
+- renders user-scoped history actions.
+
+History actions:
+- `open_conversation`
+  - validates ownership,
+  - switches active conversation in session,
+  - renders persisted messages,
+- `new_conversation`
+  - allocates new `conversation_id`,
+  - keeps old history available in the list,
+  - resets pending approval/edit state.
+
+Follow-up messages are then routed through the currently active conversation state.
+
 ### Utils Layer
 
 `src/text_to_sql_agent/utils/`
@@ -169,6 +248,8 @@ A typical request should follow this flow:
 
 1. Input intake
 The application receives a natural language question and optional execution context.
+
+For Chainlit web flow, authenticated identity and active `conversation_id` are already present in session state before message handling.
 
 2. Context preparation
 Services load relevant schema information, table metadata, business rules, and any retrieval-augmented context.
@@ -195,6 +276,8 @@ Services convert raw rows into a response that can include tabular data, summari
 
 9. Final response
 The application returns the SQL, result set, and any explanation that should be exposed to the caller.
+
+In web runtime, messages and approval events are persisted under the active conversation so the user can reopen and continue later.
 
 ## Cross-Cutting Concerns
 

@@ -15,7 +15,12 @@ from .handlers import (
     resume_query_turn,
     start_query_turn,
 )
-from .renderers import build_plotly_figure, render_markdown_table, render_sql_preview
+from .renderers import (
+    build_plotly_figure,
+    render_conversation_action_label,
+    render_markdown_table,
+    render_sql_preview,
+)
 
 __all__ = [
     "authenticate_with_password",
@@ -26,6 +31,7 @@ __all__ = [
     "build_export_files",
     "build_plotly_figure",
     "build_ui_runtime",
+    "render_conversation_action_label",
     "render_markdown_table",
     "render_sql_preview",
     "resume_query_turn",

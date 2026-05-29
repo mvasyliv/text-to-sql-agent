@@ -13,6 +13,21 @@ def render_sql_preview(sql_query: str) -> str:
     return f"```sql\n{normalized}\n```"
 
 
+def render_conversation_action_label(
+    title: str | None,
+    *,
+    conversation_id: str,
+    max_length: int = 48,
+) -> str:
+    """Return a compact action label for one conversation entry."""
+    normalized = (title or "").strip() or f"Conversation {conversation_id[:8]}"
+    if max_length < 8:
+        max_length = 8
+    if len(normalized) <= max_length:
+        return normalized
+    return normalized[: max_length - 3].rstrip() + "..."
+
+
 def render_markdown_table(execution_result: dict[str, Any], *, max_rows: int = 20) -> str:
     """Return markdown table for execution result."""
     rows = execution_result.get("rows")

@@ -1,5 +1,7 @@
 """Tests for conversation history service ownership filtering and access checks."""
 
+from datetime import datetime, timezone
+
 import pytest
 
 from text_to_sql_agent.models.session import ChatMessage, Conversation, MessageRole, User
@@ -81,4 +83,46 @@ def test_load_user_conversation_raises_when_conversation_missing() -> None:
 
     with pytest.raises(ConversationAccessError):
         service.load_user_conversation(user_id="u-1", conversation_id="does-not-exist")
+
+
+def test_list_user_conversations_keeps_newest_first_order() -> None:
+    repo = InMemorySessionRepository()
+    now = datetime(2026, 5, 29, tzinfo=timezone.utc)
+    repo.save_user(User(user_id="u-1", display_name="Alice"))
+    repo.save_conversation(
+        Conversation(
+            conversation_id="c-old",
+            user_id="u-1",
+            title="Old",
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    repo.save_conversation(
+        Conversation(
+            conversation_id="c-new",
+            user_id="u-1",
+            title="New",
+            created_at=now.replace(hour=23),
+            updated_at=now.replace(hour=23),
+        )
+    )
+    service = ConversationHistoryService(repo)
+
+    conversations = service.list_user_conversations("u-1")
+
+    assert [item.conversation_id for item in conversations] == ["c-new", "c-old"]
+
+
+def test_load_user_conversation_returns_empty_messages_for_new_conversation() -> None:
+    repo = InMemorySessionRepository()
+    repo.save_user(User(user_id="u-1", display_name="Alice"))
+    repo.save_conversation(Conversation(conversation_id="c-empty", user_id="u-1", title="Empty"))
+    service = ConversationHistoryService(repo)
+
+    record = service.load_user_conversation(user_id="u-1", conversation_id="c-empty")
+
+    assert record.conversation.conversation_id == "c-empty"
+    assert record.messages == []
+
 

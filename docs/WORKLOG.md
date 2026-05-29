@@ -8,6 +8,134 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-05-29
+
+### T-2026-05-29-085 - Relocate conversation DB and align env connection path
+
+- Added `CONVERSATION_DB_PATH=tests/text_to_sql_agent/db/conversation.db` to `.env`, `.env.dev`, `.env.test`, and `.env.prod`.
+- Bootstrapped and stored the conversation DB at `tests/text_to_sql_agent/db/conversation.db`.
+- Moved the accidentally created root-level `conversation.db` into `tests/text_to_sql_agent/db/conversation.db`.
+- Removed temporary backup file `tests/text_to_sql_agent/db/conversation.db.bak_from_target_before_move` after successful move confirmation.
+- Verification:
+  - Confirmed `conversation.db` is no longer present in repository root.
+  - Confirmed `tests/text_to_sql_agent/db/conversation.db` exists.
+  - Confirmed all env files contain the same `CONVERSATION_DB_PATH` value.
+
+### T-2026-05-29-084 - Set up Chainlit JWT secret configuration
+
+- **Issue Diagnosis**: Initial approach attempted to pass JWT secret via `--auth-secret` CLI flag, but Chainlit doesn't support this option (only reads from environment).
+- **Final Implementation**: Updated `main_chainlit.py` launcher to pass JWT secret via **environment variable** to Chainlit subprocess.
+- **Key Changes to `main_chainlit.py`**:
+  - Modified `_build_runtime_env()` to include `CHAINLIT_AUTH_SECRET` in subprocess environment variables.
+  - Removed invalid `--auth-secret` CLI flag from `build_chainlit_command()`.
+  - Added warning log when JWT secret is missing (authentication unavailable).
+  - Secret is automatically resolved from `.env` files via `load_runtime_environment()` mechanism.
+  - Production secrets load from AWS Secrets Manager or HashiCorp Vault via `[LOAD_FROM_SECRETS]` placeholder resolution.
+- **Environment Configuration**:
+  - `.env` (template): `CHAINLIT_AUTH_SECRET=[LOAD_FROM_SECRETS]` with documentation.
+  - `.env.dev`: Concrete test secret `dev-local-chainlit-secret-key-32-chars1234567890ab`.
+  - `.env.test`: Concrete test secret `test-chainlit-secret-key-for-testing-12345678901234`.
+  - `.env.prod`: Placeholder `[LOAD_FROM_SECRETS]` for runtime resolution from secrets backend.
+- **Verification**:
+  - Syntax check: ✓ OK
+  - Ruff code quality: ✓ OK
+  - Unit tests (secret in environment): ✓ PASSED
+  - Unit tests (no CLI flag): ✓ PASSED
+  - Launcher smoke test (timeout 5s): ✓ Server started successfully at http://localhost:8000
+  - No CLI errors: ✓ Chainlit accepted command without `--auth-secret` flag
+- **Status**: `done`
+
+## 2026-05-28
+
+### T-2026-05-28-083 - Document auth and history architecture updates
+
+- Updated `docs/ARCHITECTURE.md` to reflect implemented auth/history architecture instead of initial minimal-state assumptions.
+- Documented concrete auth flow boundaries:
+  - Chainlit password callback wiring,
+  - `AuthService` policy role,
+  - `SQLiteAuthRepository` persistence boundary.
+- Documented conversation persistence and ownership model over shared `users`/`conversations`/`messages` schema.
+- Added explicit user-isolation boundary description for `ConversationHistoryService` owner checks.
+- Added Chainlit history UX lifecycle details (`on_chat_start`, `open_conversation`, `new_conversation`) and active-conversation behavior for follow-up messages.
+- Validation:
+  - Documentation-only task; no source code or runtime behavior changed.
+
+### T-2026-05-28-082 - Add integration tests for auth and resume flow
+
+- Added `tests/text_to_sql_agent/ui/test_chainlit_auth_and_history.py` with integration-style callback tests that cover:
+  - password auth callback success,
+  - chat-start identity/session initialization,
+  - opening a prior conversation,
+  - continuing with a follow-up question in the selected conversation,
+  - denying cross-user conversation opening attempts.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_auth_and_history.py -q` -> 2 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/ -q` -> 33 passed.
+
+### T-2026-05-28-081 - Add service tests for history filtering
+
+- Updated `tests/text_to_sql_agent/services/test_conversation_history_service.py` with additional focused checks for:
+  - newest-first ordering in `list_user_conversations(...)`,
+  - loading owned conversation with an empty message list.
+- Existing tests for strict ownership isolation and missing-conversation failure remain in place.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/services/test_conversation_history_service.py -q` -> 6 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/services/test_conversation_history_service.py tests/text_to_sql_agent/ui/test_chainlit_auth_and_history.py -q` -> 8 passed.
+
+### T-2026-05-28-080 - Add repository tests for SQLite session persistence
+
+- Added `tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py` with focused coverage for:
+  - user persistence (`save_user`, `get_user`) and idempotent inserts,
+  - conversation persistence (`save_conversation`, `get_conversation`, `list_conversations`) with user isolation and newest-first ordering,
+  - message persistence (`append_message`, `list_messages`) with role preservation, metadata roundtrip, ordering by `created_at`, duplicate ID handling, and per-conversation isolation,
+  - persisted `graph_thread_id` roundtrip and update behavior.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py -q` -> 20 passed.
+
+### T-2026-05-28-079 - Add repository tests for SQLite auth persistence
+
+- Added `tests/text_to_sql_agent/repositories/test_sqlite_auth_repository.py` with focused coverage for:
+  - account creation and retrieval by username/user_id,
+  - duplicate username and user_id constraint handling,
+  - password-hash update behavior and missing-user failures,
+  - account activation toggle and missing-user failures,
+  - username existence checks and multi-account isolation.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_sqlite_auth_repository.py -q` -> 17 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/repositories/test_sqlite_auth_repository.py tests/text_to_sql_agent/repositories/test_sqlite_session_repository.py -q` -> 37 passed.
+
+### T-2026-05-28-078 - Add Chainlit action to open existing conversation
+
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py` with `@cl.action_callback("open_conversation")`.
+- Implemented payload parsing and ownership-safe loading through `ConversationHistoryService.load_user_conversation(...)`.
+- Added active-conversation switching helper to reset session turn state (`conversation_id`, `pending_thread_id`, `awaiting_edit_sql`, `last_state`) when opening a saved conversation.
+- Added conversation-message rendering to show persisted messages after a successful open action.
+- Added focused test `test_open_conversation_loads_messages_and_switches_active_conversation` in `tests/text_to_sql_agent/ui/test_chainlit_app.py`.
+
+### T-2026-05-28-077 - Add Chainlit action to start a new conversation
+
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py` with `@cl.action_callback("new_conversation")`.
+- Added reusable `Start new conversation` action in user-history rendering for both empty and non-empty history states.
+- New-conversation callback now generates a fresh conversation id, resets active session turn state, and re-renders user conversation list so prior history remains accessible.
+- Added focused test `test_new_conversation_sets_new_id_and_keeps_history_accessible` in `tests/text_to_sql_agent/ui/test_chainlit_app.py`.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_chainlit_app.py -q` -> 12 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/ -q` -> 31 passed.
+
+### T-2026-05-28-076 - Render user conversation list in chat UI
+
+- Updated `src/text_to_sql_agent/ui/chainlit_app.py` to render user-scoped history on chat start via `_render_user_conversation_list(...)`.
+- Added `_build_history_actions(...)` to expose `open_conversation` action buttons with conversation IDs in action payloads.
+- Wired Chainlit runtime persistence to SQLite by constructing `SQLiteSessionRepository` from `load_conversation_auth_settings()` in `_get_runtime()`.
+- Added `render_conversation_action_label(...)` in `src/text_to_sql_agent/ui/renderers.py` for concise action labels with fallback/truncation.
+- Exported the new renderer helper from `src/text_to_sql_agent/ui/__init__.py`.
+- Added focused tests:
+  - `tests/text_to_sql_agent/ui/test_chainlit_app.py` for history action payloads and list rendering behavior (non-empty/empty history),
+  - `tests/text_to_sql_agent/ui/test_renderers.py` for conversation-label fallback/truncation.
+- Validation:
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/test_renderers.py tests/text_to_sql_agent/ui/test_chainlit_app.py -q` -> 14 passed.
+  - `venvtext2sql/bin/pytest tests/text_to_sql_agent/ui/ -q` -> 28 passed.
+
 ## 2026-05-28
 
 ### T-2026-05-28-075 - Persist graph thread id per conversation
@@ -1078,7 +1206,7 @@ Each agent has specific constraints and file responsibilities to ensure:
 **Usage in VS Code**
 
 Activate agents via Copilot Chat:
-- Ask with agent reference: "@architect: Design..." 
+- Ask with agent reference: "@architect: Design..."
 - Or look for agent selector dropdown in Copilot Chat
 - Each agent applies its specific instructions automatically
 

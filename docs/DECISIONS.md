@@ -155,3 +155,18 @@ This setup remains local to your VS Code profile and does not appear in `git sta
 - Decision: The repository keeps an explicit mirrored directory skeleton for `agents`, `config`, `graphs`, `models`, `prompts`, `repositories`, `services`, and `utils`.
 - Decision: Test placement rule is enforced in project and tester instructions to keep future contributions consistent.
 - Rationale: Mirrored structure improves discoverability, code-to-test traceability, and maintenance as the codebase grows.
+
+## D-2026-05-29-016
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-084
+- Decision: Chainlit JWT secret (`CHAINLIT_AUTH_SECRET`) must be configured via environment variables in all `.env` files.
+- Decision: JWT secret is passed to Chainlit subprocess via **environment variable** (not CLI flag), since Chainlit reads authentication config from process environment only.
+- Decision: Development environments (`.env.dev`) use a concrete 48-character test JWT secret.
+- Decision: Production environments (`.env.prod`) use the placeholder value `[LOAD_FROM_SECRETS]` for runtime resolution via AWS Secrets Manager or HashiCorp Vault.
+- Decision: Testing environments (`.env.test`) use a concrete test JWT secret different from development to allow parallel test execution.
+- Decision: The Chainlit launcher (`main_chainlit.py`) is responsible for: (1) extracting `CHAINLIT_AUTH_SECRET` from process environment, (2) including it in the subprocess environment variables passed to Chainlit, (3) logging a warning when secret is missing.
+- Decision: JWT secret resolution uses the existing `load_runtime_environment()` mechanism to resolve `[LOAD_FROM_SECRETS]` placeholders at launcher startup before subprocess creation.
+- Decision: All secrets are passed to subprocess via environment variables, never as CLI arguments, for improved security and clarity.
+- Rationale: Chainlit reads authentication config from environment variables only, not CLI flags. Environment variable passing is the standard practice for sensitive data in subprocess execution. This approach follows the existing secret management pattern (environment-based configuration with placeholder resolution) and ensures secure production handling while supporting local development.
+

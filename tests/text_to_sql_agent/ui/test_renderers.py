@@ -2,6 +2,7 @@
 
 from text_to_sql_agent.ui.renderers import (
     build_plotly_figure,
+    render_conversation_action_label,
     render_markdown_table,
     render_sql_preview,
 )
@@ -44,3 +45,24 @@ def test_build_plotly_figure_for_line_chart():
     assert figure["data"][0]["type"] == "scatter"
     assert figure["data"][0]["mode"] == "lines+markers"
     assert figure["layout"]["xaxis"]["title"] == "row_index"
+
+
+def test_render_conversation_action_label_uses_title_or_fallback():
+    assert (
+        render_conversation_action_label("Sales trend", conversation_id="conv-1234")
+        == "Sales trend"
+    )
+    assert (
+        render_conversation_action_label("   ", conversation_id="conv-1234")
+        == "Conversation conv-123"
+    )
+
+
+def test_render_conversation_action_label_truncates_long_titles():
+    label = render_conversation_action_label(
+        "Very long conversation title that should be truncated safely",
+        conversation_id="conv-1234",
+        max_length=18,
+    )
+    assert label == "Very long conve..."
+
