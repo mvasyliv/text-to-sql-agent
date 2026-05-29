@@ -18,12 +18,17 @@ Rules:
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
-
+| T-2026-05-29-086 | 2026-05-29 | Draft RFC for incremental functional-style migration | planned | **P1**. Create an RFC defining project-specific functional style scope, non-goals, migration boundaries, first pilot modules, and rollout criteria. | `docs/RFC_FUNCTIONAL_STYLE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/DECISIONS.md` |
+| T-2026-05-29-087 | 2026-05-29 | Extract pure render-model builders from Chainlit UI renderers | planned | **P2 (recommended first implementation PR)**. Isolate pure render-model construction from Chainlit element creation so UI rendering can be validated with deterministic unit tests and minimal mocking. | `src/text_to_sql_agent/ui/renderers.py`, `tests/text_to_sql_agent/ui/test_renderers.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-05-29-088 | 2026-05-29 | Refactor query analytics service into pure chart derivation functions | planned | **P2**. Separate chart derivation logic into deterministic pure functions with explicit inputs/outputs and reduce side-effect coupling in analytics flow. | `src/text_to_sql_agent/services/query_analytics.py`, `tests/text_to_sql_agent/services/test_query_analytics.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-05-29-089 | 2026-05-29 | Refactor query insights service into explicit pure transformation pipeline | planned | **P3**. Split narrative generation in `query_insights` into pure, typed transformation helpers and keep formatting/transport concerns at edge adapters only. | `src/text_to_sql_agent/services/query_insights.py`, `tests/text_to_sql_agent/services/test_query_insights.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 
 ## COMPLETED
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-05-29-091 | 2026-05-29 | Add functional-style Definition of Done and PR checklist | done | Added `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` with a concise functional-style PR checklist plus a compact Definition of Done for review standardization. | `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md`, `docs/DECISIONS.md` |
+| T-2026-05-29-090 | 2026-05-29 | Define functional coding conventions for pure core boundaries | done | Added project-level functional-style requirement to `.github/copilot-instructions.md`, including where functional style is mandatory (services/core transformations) and where imperative style remains appropriate (UI/repositories/entrypoints). | `.github/copilot-instructions.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md`, `docs/DECISIONS.md` |
 | T-2026-05-29-085 | 2026-05-29 | Relocate conversation DB and align env connection path | done | Moved root-level `conversation.db` into `tests/text_to_sql_agent/db/conversation.db`, removed temporary backup file, and set `CONVERSATION_DB_PATH` consistently in `.env`, `.env.dev`, `.env.test`, and `.env.prod`. | `tests/text_to_sql_agent/db/conversation.db`, `.env`, `.env.dev`, `.env.test`, `.env.prod`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-05-29-084 | 2026-05-29 | Set up Chainlit JWT secret configuration | done | Implemented JWT secret passing via environment variable to Chainlit subprocess (not CLI flag). Modified `_build_runtime_env()` to include `CHAINLIT_AUTH_SECRET` from process environment. Added `CHAINLIT_AUTH_SECRET` to all `.env` files (`.env`, `.env.dev`, `.env.prod`, `.env.test`). Wired secret resolution through `load_runtime_environment()` for `[LOAD_FROM_SECRETS]` placeholder support in production. Added warning log when secret is missing. Verified launcher starts successfully with JWT secret configured. | `.env`, `.env.dev`, `.env.prod`, `.env.test`, `main_chainlit.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md`, `docs/DECISIONS.md` |
 | T-2026-05-28-083 | 2026-05-29 | Document auth and history architecture updates | done | Updated architecture documentation with the implemented username/password auth flow, conversation DB persistence model, ownership enforcement boundary, and Chainlit open/new conversation lifecycle for user-scoped history. | `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
@@ -149,4 +154,3 @@ Checklist template for a new task:
 - [ ] Add execution notes to `docs/WORKLOG.md`.
 - [ ] Add or update `docs/CHANGELOG.md` if project behavior, structure, process, or documentation expectations changed.
 - [ ] Add or update `docs/DECISIONS.md` if a durable process or architecture decision was made.
-

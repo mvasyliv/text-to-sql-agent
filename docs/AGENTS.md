@@ -75,6 +75,7 @@ We have 5 specialized agents, each with distinct responsibilities and constraint
 - Document APIs and usage
 - Create diagrams (Mermaid)
 - Maintain documentation quality
+- When documenting functional-style PR expectations, reference `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md`
 
 **How to activate:**
 - Ask: "As the documentarian, please document..."
@@ -212,3 +213,4 @@ Alternatively, if your VS Code version supports agent selection:
 - Using the right agent for the right task **improves quality and speed**
 - Agent instructions are stored as `.*.instructions.md` files in the project root
 - Agents inherit base rules from `.github/copilot-instructions.md`
+- Functional-style PRs should use `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` as the review standard and `docs/AGENTS.md` as the entry point for finding it.

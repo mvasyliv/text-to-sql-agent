@@ -56,6 +56,28 @@ This rule applies to:
 - Use type hints for new or modified Python code.
 - Prefer Pydantic models or existing schema patterns where structured validation is already part of the design.
 
+## Functional Style Requirement
+
+This project follows a **functional-first style** for core business logic.
+
+Use functional style **by default** when changing or adding logic in:
+- `src/text_to_sql_agent/services/`
+- pure transformation logic inside `src/text_to_sql_agent/agents/`
+- reusable data-shaping utilities in `src/text_to_sql_agent/utils/`
+
+In these areas:
+- Prefer pure functions with explicit inputs/outputs.
+- Avoid hidden side effects and implicit global/process state reads.
+- Pass dependencies explicitly rather than fetching them inside core logic.
+- Keep functions deterministic and easy to test with minimal mocking.
+
+Use imperative style where it is naturally required (boundary layers), including:
+- `src/text_to_sql_agent/ui/` (Chainlit callbacks and runtime interactions)
+- `src/text_to_sql_agent/repositories/` (database/file/network I/O)
+- launchers/entrypoints such as `main.py`, `main_chainlit.py`, `main_terminal.py`
+
+Target architecture guideline: **functional core, imperative shell**.
+
 ## Editing Rules
 
 - Preserve the current repository style and naming conventions.

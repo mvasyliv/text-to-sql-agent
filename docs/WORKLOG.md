@@ -10,6 +10,31 @@ Rules:
 
 ## 2026-05-29
 
+### T-2026-05-29-091 - Add functional-style Definition of Done and PR checklist
+
+- Added `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` as a short review guide for PRs that touch functional-core code paths.
+- Included a concise PR checklist covering purity, explicit dependencies, deterministic transformations, boundary isolation, and test coverage.
+- Added a compact Definition of Done section for changes that follow the functional-style review path.
+- Linked the checklist from `docs/AGENTS.md` and added `.github/PULL_REQUEST_TEMPLATE.md` so reviewers see the standard directly in the PR flow.
+- Validation:
+  - Documentation-only change; no runtime code behavior modified.
+
+### T-2026-05-29-090 - Define functional coding conventions for pure core boundaries
+
+- Updated `.github/copilot-instructions.md` with a new **Functional Style Requirement** section.
+- Defined where functional style is required by default:
+  - `src/text_to_sql_agent/services/`
+  - pure transformation logic in `src/text_to_sql_agent/agents/`
+  - reusable data-shaping helpers in `src/text_to_sql_agent/utils/`
+- Defined boundary layers where imperative style is expected:
+  - `src/text_to_sql_agent/ui/`
+  - `src/text_to_sql_agent/repositories/`
+  - entrypoints/launchers (`main.py`, `main_chainlit.py`, `main_terminal.py`)
+- Added explicit guidelines: pure functions, explicit dependencies, deterministic behavior, and minimal mocking.
+- Recorded target architecture rule: **functional core, imperative shell**.
+- Validation:
+  - Documentation-only change; no runtime code behavior modified.
+
 ### T-2026-05-29-085 - Relocate conversation DB and align env connection path
 
 - Added `CONVERSATION_DB_PATH=tests/text_to_sql_agent/db/conversation.db` to `.env`, `.env.dev`, `.env.test`, and `.env.prod`.

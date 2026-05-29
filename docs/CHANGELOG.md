@@ -13,6 +13,18 @@ _None_
 
 ### Added
 
+- Functional-style review checklist and Definition of Done (T-2026-05-29-091):
+  - Added `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` for PRs that touch functional-core code paths.
+  - Defined a concise reviewer checklist for purity, explicit dependencies, deterministic transformations, boundary isolation, and test coverage.
+  - Added a compact Definition of Done section to standardize acceptance criteria for this review style.
+  - Linked the checklist from `docs/AGENTS.md` and added `.github/PULL_REQUEST_TEMPLATE.md` to surface the review standard in the PR flow.
+
+- Functional-style project instruction boundaries (T-2026-05-29-090):
+  - Added a new **Functional Style Requirement** section to `.github/copilot-instructions.md`.
+  - Defined functional-first scope for core logic in `services`, pure transformations in `agents`, and data-shaping helpers in `utils`.
+  - Defined imperative boundary scope for `ui`, `repositories`, and app entrypoints (`main.py`, `main_chainlit.py`, `main_terminal.py`).
+  - Added explicit guideline: target architecture is **functional core, imperative shell**.
+
 - Conversation DB location alignment and cleanup (T-2026-05-29-085):
   - Added `CONVERSATION_DB_PATH=tests/text_to_sql_agent/db/conversation.db` to `.env`, `.env.dev`, `.env.test`, and `.env.prod`.
   - Consolidated conversation storage under `tests/text_to_sql_agent/db/conversation.db`.

@@ -170,3 +170,22 @@ This setup remains local to your VS Code profile and does not appear in `git sta
 - Decision: All secrets are passed to subprocess via environment variables, never as CLI arguments, for improved security and clarity.
 - Rationale: Chainlit reads authentication config from environment variables only, not CLI flags. Environment variable passing is the standard practice for sensitive data in subprocess execution. This approach follows the existing secret management pattern (environment-based configuration with placeholder resolution) and ensures secure production handling while supporting local development.
 
+## D-2026-05-29-017
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-090
+- Decision: The project uses a **functional-first** coding style for core business logic.
+- Decision: Functional style is mandatory by default in `src/text_to_sql_agent/services/`, pure transformation flows in `src/text_to_sql_agent/agents/`, and reusable data-shaping helpers in `src/text_to_sql_agent/utils/`.
+- Decision: Imperative style is expected at boundary layers where side effects are intrinsic: `src/text_to_sql_agent/ui/`, `src/text_to_sql_agent/repositories/`, and entrypoints (`main.py`, `main_chainlit.py`, `main_terminal.py`).
+- Decision: Core logic should prefer pure functions, explicit inputs/outputs, explicit dependency passing, and deterministic behavior to keep tests focused and low-mock.
+- Decision: Architectural target is **functional core, imperative shell**.
+- Rationale: This split preserves practical integration with I/O-heavy adapters while making domain logic easier to reason about, test, and evolve safely.
+
+## D-2026-05-29-018
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-091
+- Decision: Functional-style PRs should be reviewed against `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md`.
+- Decision: The checklist is the shared review standard for changes that touch the functional core, and it should be used together with the documented Definition of Done.
+- Rationale: A shared review rubric keeps feedback consistent and makes the project’s functional-style expectations easy to apply during code review.
+
