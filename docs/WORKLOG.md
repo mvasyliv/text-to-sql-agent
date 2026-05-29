@@ -10,6 +10,41 @@ Rules:
 
 ## 2026-05-29
 
+### T-2026-05-29-086 - Draft RFC for incremental functional-style migration
+
+- Added `docs/RFC_FUNCTIONAL_STYLE.md` as the draft migration reference for functional-style work in this repository.
+- Defined project-specific goals, non-goals, functional-style scope, boundary layers, migration rules, adjacency refactor pattern, pilot modules, and rollout criteria.
+- Updated `docs/ARCHITECTURE.md` to link the RFC from the architecture principles section and document the functional-core / imperative-shell split explicitly.
+- Validation:
+  - Documentation-only change; no runtime code behavior modified.
+
+### T-2026-05-29-089 - Refactor query insights service into explicit pure transformation pipeline
+
+- Added `src/text_to_sql_agent/services/query_insights_derivation.py` with pure helpers for safe length handling, no-row insights, and deterministic insight derivation from execution results and chart metadata.
+- Refactored `src/text_to_sql_agent/services/query_insights.py` into a thin wrapper that preserves the existing `QueryInsightResult` API.
+- Exported the new pure derivation helpers from `src/text_to_sql_agent/services/__init__.py` for direct reuse and focused testing.
+- Added deterministic tests in `tests/text_to_sql_agent/services/test_query_insights_derivation.py` and kept the existing wrapper tests in place.
+- Validation:
+  - Targeted service tests added for the pure query insight derivation layer.
+
+### T-2026-05-29-088 - Refactor query analytics service into pure chart derivation functions
+
+- Added `src/text_to_sql_agent/services/query_analytics_derivation.py` with pure helpers for numeric/categorical detection, category-sum charts, frequency charts, numeric line charts, fallback charts, and a normalized derivation dataclass.
+- Refactored `src/text_to_sql_agent/services/query_analytics.py` into a thin wrapper that maps the pure derivation output into the existing `QueryAnalyticsResult` API.
+- Exported the new pure derivation helpers from `src/text_to_sql_agent/services/__init__.py` for direct reuse and focused testing.
+- Added deterministic tests in `tests/text_to_sql_agent/services/test_query_analytics_derivation.py` and kept the existing service wrapper tests in place.
+- Validation:
+  - Targeted service tests added for the pure analytics derivation layer.
+
+### T-2026-05-29-087 - Extract pure render-model builders from Chainlit UI renderers
+
+- Added `src/text_to_sql_agent/ui/render_models.py` with frozen dataclasses and pure builders for SQL preview, conversation labels, markdown tables, and Plotly figures.
+- Refactored `src/text_to_sql_agent/ui/renderers.py` to use the new pure builders while preserving the existing public API.
+- Exported the builders and render-model types from `src/text_to_sql_agent/ui/__init__.py` for direct reuse and deterministic testing.
+- Added focused tests in `tests/text_to_sql_agent/ui/test_render_models.py` for normalization, truncation, fallback handling, truncation reporting, and chart figure construction.
+- Validation:
+  - Targeted UI render-model tests added for pure builders.
+
 ### T-2026-05-29-091 - Add functional-style Definition of Done and PR checklist
 
 - Added `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` as a short review guide for PRs that touch functional-core code paths.

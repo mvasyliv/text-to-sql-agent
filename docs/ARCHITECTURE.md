@@ -26,6 +26,22 @@ The high-level outcome is:
 - Prefer explicit workflow steps over hidden agent behavior.
 - Make SQL generation observable, testable, and easy to constrain.
 - Keep the entry point thin and move real logic into `src/text_to_sql_agent/`.
+- Use **functional core, imperative shell** as the main refactor direction for incremental internal improvements.
+
+## Functional Core and Imperative Shell
+
+The project uses a functional-first architecture for core business logic.
+
+- Functional core:
+  - `src/text_to_sql_agent/services/`
+  - pure transformation helpers in `src/text_to_sql_agent/agents/`
+  - reusable data-shaping helpers in `src/text_to_sql_agent/utils/`
+- Imperative shell:
+  - `src/text_to_sql_agent/ui/`
+  - `src/text_to_sql_agent/repositories/`
+  - runtime entrypoints and launchers
+
+The detailed migration pattern, pilot modules, and rollout criteria are defined in `docs/RFC_FUNCTIONAL_STYLE.md`.
 
 ## High-Level Components
 

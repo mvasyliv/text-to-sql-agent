@@ -189,3 +189,35 @@ This setup remains local to your VS Code profile and does not appear in `git sta
 - Decision: The checklist is the shared review standard for changes that touch the functional core, and it should be used together with the documented Definition of Done.
 - Rationale: A shared review rubric keeps feedback consistent and makes the project’s functional-style expectations easy to apply during code review.
 
+## D-2026-05-29-019
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-087
+- Decision: Pure render-model construction for Chainlit UI should live in `src/text_to_sql_agent/ui/render_models.py`, while `src/text_to_sql_agent/ui/renderers.py` stays as a thin formatting/adaptation layer.
+- Decision: UI render-model builders should return deterministic, testable dataclasses or plain values and should not create Chainlit objects directly.
+- Rationale: Separating render-model construction from UI adapters keeps the functional core easy to test and prevents Chainlit dependencies from leaking into deterministic logic.
+
+## D-2026-05-29-020
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-088
+- Decision: Query analytics chart derivation should live in `src/text_to_sql_agent/services/query_analytics_derivation.py` as pure helper functions and normalized derivation dataclasses.
+- Decision: `src/text_to_sql_agent/services/query_analytics.py` should remain a thin wrapper that preserves the existing `QueryAnalyticsResult` API for callers.
+- Rationale: This keeps the derivation logic deterministic and testable while minimizing impact on existing service and agent integrations.
+
+## D-2026-05-29-021
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-089
+- Decision: Query insight derivation should live in `src/text_to_sql_agent/services/query_insights_derivation.py` as pure helper functions and a normalized derivation dataclass.
+- Decision: `src/text_to_sql_agent/services/query_insights.py` should remain a thin wrapper that preserves the existing `QueryInsightResult` API.
+- Rationale: Separating insight derivation from the service wrapper keeps the transformation pipeline deterministic, testable, and easy to evolve without changing callers.
+
+## D-2026-05-29-022
+
+- Date: 2026-05-29
+- Related task: T-2026-05-29-086
+- Decision: `docs/RFC_FUNCTIONAL_STYLE.md` is the draft reference for future functional-style migration work in this repository.
+- Decision: The RFC defines project-specific scope, non-goals, migration rules, pilot modules, and rollout criteria, and should be consulted when planning new functional-core refactors.
+- Rationale: A single RFC keeps future migration work consistent and avoids re-deciding the same functional-style boundaries in each task.
+

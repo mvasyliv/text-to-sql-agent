@@ -13,6 +13,25 @@ _None_
 
 ### Added
 
+- Functional-style migration RFC (T-2026-05-29-086):
+  - Added `docs/RFC_FUNCTIONAL_STYLE.md` with functional-style scope, non-goals, migration rules, pilot modules, and rollout criteria.
+  - Linked the RFC from `docs/ARCHITECTURE.md` and documented the functional-core / imperative-shell split in the architecture reference.
+
+- Pure query insight derivation helpers (T-2026-05-29-089):
+  - Added `src/text_to_sql_agent/services/query_insights_derivation.py` with deterministic helpers for no-row handling, row/column counting, and chart metadata summarization.
+  - Refactored `src/text_to_sql_agent/services/query_insights.py` into a thin wrapper that preserves the `QueryInsightResult` API.
+  - Added focused tests for the pure derivation helpers in `tests/text_to_sql_agent/services/test_query_insights_derivation.py`.
+
+- Pure chart derivation helpers for query analytics (T-2026-05-29-088):
+  - Added `src/text_to_sql_agent/services/query_analytics_derivation.py` with deterministic helpers for numeric/categorical detection and chart derivation strategies.
+  - Refactored `src/text_to_sql_agent/services/query_analytics.py` into a thin wrapper that preserves the `QueryAnalyticsResult` API.
+  - Added focused tests for the pure derivation helpers in `tests/text_to_sql_agent/services/test_query_analytics_derivation.py`.
+
+- Pure render-model builders for Chainlit UI rendering (T-2026-05-29-087):
+  - Added `src/text_to_sql_agent/ui/render_models.py` with pure builders for SQL preview, conversation labels, markdown tables, and Plotly figures.
+  - Refactored `src/text_to_sql_agent/ui/renderers.py` into a thin adapter layer that preserves the existing public API.
+  - Added deterministic tests for the normalized render models in `tests/text_to_sql_agent/ui/test_render_models.py`.
+
 - Functional-style review checklist and Definition of Done (T-2026-05-29-091):
   - Added `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` for PRs that touch functional-core code paths.
   - Defined a concise reviewer checklist for purity, explicit dependencies, deterministic transformations, boundary isolation, and test coverage.
