@@ -107,6 +107,20 @@ If no focused test exists, add or update one when the change affects behavior th
 - Record implementation history in `docs/WORKLOG.md` when work is performed.
 - Record durable process or architecture decisions in `docs/DECISIONS.md` when relevant.
 
+## Task Trace Completion Gate (Mandatory)
+
+Before considering a task complete, the following documentation trace is mandatory:
+
+- `docs/TASKS.md` must be updated for every completed task.
+- `docs/WORKLOG.md` must be updated for every completed task.
+- `docs/CHANGELOG.md` must be updated when the change affects behavior, architecture, configuration, process, or user-facing documentation.
+
+Completion policy:
+
+- Do not mark a task as done and do not provide a final completion summary until the required task trace files are updated.
+- For implementation work that changes files under `src/` or `tests/`, task trace updates are required in the same change set.
+- Treat missing task trace updates as an incomplete task that must be fixed before finishing.
+
 ## Configuration And Secrets
 
 - Do not hardcode secrets, API keys, DSNs, or credentials.

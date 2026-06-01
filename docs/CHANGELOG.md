@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-01
+
+### Planned
+
+_None_
+
+### Added
+
+- Strengthened task-trace CI enforcement to require WORKLOG updates (T-2026-06-01-094):
+  - Updated `.github/workflows/task-trace-check.yml` to require both `docs/TASKS.md` and `docs/WORKLOG.md` whenever pull requests include changes in `src/` or `tests/`.
+  - Prevents implementation changes from being merged without a corresponding worklog entry.
+
+- Added mandatory task-trace completion gate and CI enforcement (T-2026-06-01-093):
+  - Updated `.github/copilot-instructions.md` with a required completion gate for `docs/TASKS.md`, `docs/WORKLOG.md`, and conditionally `docs/CHANGELOG.md`.
+  - Added `.github/workflows/task-trace-check.yml` to fail pull requests when `src/` or `tests/` change without a corresponding update to `docs/TASKS.md`.
+  - Reduces risk of completed implementation tasks being left undocumented.
+
+- Added explicit Pydantic field descriptions for canonical schema models (T-2026-06-01-092):
+  - Updated `src/text_to_sql_agent/models/schema.py` to add `Field(description=...)` metadata across `ForeignKeySchema`, `ColumnSchema`, `TableSchema`, and `DatabaseSchema`.
+  - Improves schema readability and model introspection metadata without changing runtime behavior.
+
+
 ## 2026-05-29
 
 ### Planned

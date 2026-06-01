@@ -1,0 +1,48 @@
+name: Task Trace Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  enforce-task-trace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require TASKS and WORKLOG updates for src/tests changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+
+          if [[ -z "$changed_files" ]]; then
+            echo "No changed files detected."
+            exit 0
+          fi
+
+          if echo "$changed_files" | grep -Eq '^(src/|tests/)'; then
+            if ! echo "$changed_files" | grep -qx 'docs/TASKS.md'; then
+              echo "Error: Changes in src/ or tests/ require an update in docs/TASKS.md."
+              echo "Changed files:"
+              echo "$changed_files"
+              exit 1
+            fi
+
+            if ! echo "$changed_files" | grep -qx 'docs/WORKLOG.md'; then
+              echo "Error: Changes in src/ or tests/ require an update in docs/WORKLOG.md."
+              echo "Changed files:"
+              echo "$changed_files"
+              exit 1
+            fi
+          fi
+
+          echo "Task trace check passed."

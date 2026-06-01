@@ -8,6 +8,30 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-01
+
+### T-2026-06-01-094 - Enforce WORKLOG updates in task-trace CI check
+
+- Updated `.github/workflows/task-trace-check.yml` to require updates to both `docs/TASKS.md` and `docs/WORKLOG.md` when pull requests include changes under `src/` or `tests/`.
+- Preserved the existing deterministic diff-based check between pull request base and head commits.
+- Validation:
+  - CI now fails if either `docs/TASKS.md` or `docs/WORKLOG.md` is missing from the PR change set while `src/` or `tests/` are modified.
+
+### T-2026-06-01-093 - Enforce mandatory task trace and CI check for TASKS updates
+
+- Updated `.github/copilot-instructions.md` with a mandatory Task Trace Completion Gate requiring task-trace documentation before marking work complete.
+- Added `.github/workflows/task-trace-check.yml` to fail pull requests when `src/` or `tests/` are changed without updating `docs/TASKS.md`.
+- Established a repository-level guardrail to reduce missed task-trace updates during Ctrl+I agent-driven edits.
+- Validation:
+  - Workflow rule is deterministic and checks pull request file diffs between base and head commits.
+
+### T-2026-06-01-092 - Add Field descriptions to canonical schema models
+
+- Updated `src/text_to_sql_agent/models/schema.py` to add explicit `Field(description=...)` metadata for canonical schema models (`ForeignKeySchema`, `ColumnSchema`, `TableSchema`, `DatabaseSchema`).
+- Kept model field names and runtime behavior unchanged while improving schema readability and downstream introspection quality.
+- Validation:
+  - Change already delivered in source; this entry records the completed task trace in project documentation.
+
 ## 2026-05-29
 
 ### T-2026-05-29-086 - Draft RFC for incremental functional-style migration
