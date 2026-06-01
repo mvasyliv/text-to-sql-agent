@@ -10,6 +10,41 @@ Rules:
 
 ## 2026-06-01
 
+### T-2026-06-01-099 - Add Field descriptions to RawIntrospectionResult attributes
+
+- Updated `src/text_to_sql_agent/models/introspection.py` in `RawIntrospectionResult` to define all attributes with explicit `Field(description=...)` metadata.
+- Kept existing `default_factory=list` behavior for `tables` and `warnings` while adding descriptive metadata.
+- Validation:
+  - Verified that only `RawIntrospectionResult` field declarations changed and model semantics remained unchanged.
+
+### T-2026-06-01-098 - Add Field descriptions to RawTableMeta attributes
+
+- Updated `src/text_to_sql_agent/models/introspection.py` in `RawTableMeta` to define all attributes with explicit `Field(description=...)` metadata.
+- Preserved previous defaults for optional attributes by using `Field(default=None, description=...)` for nullable metadata fields.
+- Validation:
+  - Verified that only `RawTableMeta` field declarations changed and model semantics remained unchanged.
+
+### T-2026-06-01-097 - Add Field descriptions to RawIndexMeta attributes
+
+- Updated `src/text_to_sql_agent/models/introspection.py` in `RawIndexMeta` to define all attributes with explicit `Field(description=...)` metadata.
+- Preserved previous defaults for optional attributes by using `Field(default=None, description=...)` for `index_type`.
+- Validation:
+  - Verified that only `RawIndexMeta` field declarations changed and model semantics remained unchanged.
+
+### T-2026-06-01-096 - Add Field descriptions to RawForeignKeyMeta attributes
+
+- Updated `src/text_to_sql_agent/models/introspection.py` in `RawForeignKeyMeta` to define all attributes with explicit `Field(description=...)` metadata.
+- Preserved previous defaults for optional attributes by using `Field(default=None, description=...)` for referential action fields.
+- Validation:
+  - Verified that only `RawForeignKeyMeta` field declarations changed and model semantics remained unchanged.
+
+### T-2026-06-01-095 - Add Field descriptions to RawColumnMeta attributes
+
+- Updated `src/text_to_sql_agent/models/introspection.py` in `RawColumnMeta` to define all attributes with explicit `Field(description=...)` metadata.
+- Preserved previous defaults for optional attributes by using `Field(default=None, description=...)` for nullable metadata fields.
+- Validation:
+  - Verified that only `RawColumnMeta` field declarations changed and model semantics remained unchanged.
+
 ### T-2026-06-01-094 - Enforce WORKLOG updates in task-trace CI check
 
 - Updated `.github/workflows/task-trace-check.yml` to require updates to both `docs/TASKS.md` and `docs/WORKLOG.md` when pull requests include changes under `src/` or `tests/`.

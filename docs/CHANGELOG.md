@@ -13,6 +13,26 @@ _None_
 
 ### Added
 
+- Added explicit Pydantic field descriptions for `RawIntrospectionResult` attributes (T-2026-06-01-099):
+  - Updated `src/text_to_sql_agent/models/introspection.py` so `RawIntrospectionResult` uses `Field(description=...)` for all attributes.
+  - Preserved `default_factory` defaults and existing runtime behavior while improving model metadata readability.
+
+- Added explicit Pydantic field descriptions for `RawTableMeta` attributes (T-2026-06-01-098):
+  - Updated `src/text_to_sql_agent/models/introspection.py` so `RawTableMeta` uses `Field(description=...)` for all attributes.
+  - Preserved optional defaults and existing runtime behavior while improving model metadata readability.
+
+- Added explicit Pydantic field descriptions for `RawIndexMeta` attributes (T-2026-06-01-097):
+  - Updated `src/text_to_sql_agent/models/introspection.py` so `RawIndexMeta` uses `Field(description=...)` for all attributes.
+  - Preserved optional defaults and existing runtime behavior while improving model metadata readability.
+
+- Added explicit Pydantic field descriptions for `RawForeignKeyMeta` attributes (T-2026-06-01-096):
+  - Updated `src/text_to_sql_agent/models/introspection.py` so `RawForeignKeyMeta` uses `Field(description=...)` for all attributes.
+  - Preserved optional defaults and existing runtime behavior while improving model metadata readability.
+
+- Added explicit Pydantic field descriptions for `RawColumnMeta` attributes (T-2026-06-01-095):
+  - Updated `src/text_to_sql_agent/models/introspection.py` so `RawColumnMeta` uses `Field(description=...)` for all attributes.
+  - Preserved optional defaults and existing runtime behavior while improving model metadata readability.
+
 - Strengthened task-trace CI enforcement to require WORKLOG updates (T-2026-06-01-094):
   - Updated `.github/workflows/task-trace-check.yml` to require both `docs/TASKS.md` and `docs/WORKLOG.md` whenever pull requests include changes in `src/` or `tests/`.
   - Prevents implementation changes from being merged without a corresponding worklog entry.
