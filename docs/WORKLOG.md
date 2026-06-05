@@ -8,6 +8,16 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-05
+
+### T-2026-06-05-100 - Add Field descriptions to SchemaSnapshotRef core attributes
+
+- Updated `src/text_to_sql_agent/models/lifecycle.py` so `SchemaSnapshotRef` core attributes use explicit `Field(description=...)` metadata.
+- Added descriptions for `snapshot_id`, `database_id`, `dialect`, `created_at`, and `table_count` while keeping existing required/typing semantics unchanged.
+- Validation:
+  - Verified this is a metadata-only model declaration update with no behavioral logic changes.
+
+
 ## 2026-06-01
 
 ### T-2026-06-01-099 - Add Field descriptions to RawIntrospectionResult attributes

@@ -12,11 +12,21 @@ class SchemaSnapshotRef(BaseModel):
     staleness, and indexing status in the vector store.
     """
 
-    snapshot_id: str
-    database_id: str
-    dialect: str
-    created_at: datetime
-    table_count: int
+    snapshot_id: str = Field(
+        description="Stable identifier of the stored schema snapshot.",
+    )
+    database_id: str = Field(
+        description="Logical database identifier that this snapshot belongs to.",
+    )
+    dialect: str = Field(
+        description="SQL dialect used when the snapshot was produced.",
+    )
+    created_at: datetime = Field(
+        description="UTC timestamp when the snapshot metadata record was created.",
+    )
+    table_count: int = Field(
+        description="Number of tables captured in the snapshot.",
+    )
     status: str = Field(
         description="One of: fresh, stale, indexing, indexed, failed. "
         "Tracks snapshot lifecycle from creation through vector indexing.",

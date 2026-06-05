@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-05
+
+### Planned
+
+_None_
+
+### Added
+
+- Added explicit Pydantic field descriptions for `SchemaSnapshotRef` core attributes (T-2026-06-05-100):
+  - Updated `src/text_to_sql_agent/models/lifecycle.py` so `snapshot_id`, `database_id`, `dialect`, `created_at`, and `table_count` use `Field(description=...)` metadata.
+  - Preserved existing runtime behavior while improving model metadata readability.
+
+
 ## 2026-06-01
 
 ### Planned
