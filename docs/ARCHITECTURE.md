@@ -129,6 +129,13 @@ Current auth/history repositories:
 - `SQLiteSessionRepository` persists user/session conversation state (`users`, `conversations`, `messages`) and message history ordering.
 - `conversation_db.bootstrap_schema()` initializes the auth/history schema and indices.
 
+Current MCP repository boundary:
+- `MCPClientRepository` defines the abstract repository contract for canonical MCP database tools (`mcp.db.execute`, `mcp.db.schema`, `mcp.db.health`).
+- Concrete dialect adapters should implement this contract and return the typed request/response models from `src/text_to_sql_agent/models/mcp_contract.py`.
+- `SQLiteMCPClientRepository` is the first concrete MCP adapter implementation and handles canonical execute/schema/health operations for SQLite.
+- `PostgreSQLMCPClientRepository` is the PostgreSQL concrete MCP adapter implementation and handles canonical execute/schema/health operations for PostgreSQL.
+- `AthenaMCPClientRepository` is the Athena concrete MCP adapter implementation and handles canonical execute/schema/health operations for Athena via an MCP tool invoker boundary.
+
 ### Models Layer
 
 `src/text_to_sql_agent/models/`
@@ -188,9 +195,18 @@ Current auth/history configuration keys:
 
 These are loaded through `load_conversation_auth_settings()`.
 
+Current MCP runtime configuration keys:
+- `MCP_SQLITE_ENDPOINT`, `MCP_SQLITE_TRANSPORT`, `MCP_SQLITE_CREDENTIALS_SOURCE`, `MCP_SQLITE_TIMEOUT_MS`
+- `MCP_POSTGRESQL_ENDPOINT`, `MCP_POSTGRESQL_TRANSPORT`, `MCP_POSTGRESQL_CREDENTIALS_SOURCE`, `MCP_POSTGRESQL_TIMEOUT_MS`
+- `MCP_ATHENA_ENDPOINT`, `MCP_ATHENA_TRANSPORT`, `MCP_ATHENA_CREDENTIALS_SOURCE`, `MCP_ATHENA_TIMEOUT_MS`
+
+These are loaded through `load_mcp_runtime_settings()`.
+
 Current MCP direction for query execution:
-- SQLite, PostgreSQL, and Athena access is planned through MCP-backed repository adapters.
-- MCP adapter integration follows decision D-2026-06-05-023 and keeps graph, service, and UI contracts stable.
+- SQLite, PostgreSQL, and Athena access is wired through a dialect-aware MCP-backed query execution factory.
+- `query_execution_agent.execute_approved_query()` now resolves dialect-specific MCP adapters through `src/text_to_sql_agent/repositories/query_execution_factory.py`.
+- Shared pre-execution policy enforcement now lives in `src/text_to_sql_agent/services/mcp_security_policy.py` and applies SELECT/WITH entrypoint constraints, denied-operation checks, and optional schema allowlists before MCP execution.
+- Query execution emits structured `mcp_db_operation` audit events into `agent_events`, and these events are exposed through the existing `AuditTrail` assembly path.
 
 ## Auth and User-Scoped History Architecture
 
@@ -377,6 +393,21 @@ Error taxonomy baseline:
 - `transport_error`
 
 Typed source of truth for this contract is `src/text_to_sql_agent/models/mcp_contract.py`.
+Repository-layer abstract source of truth for MCP adapter behavior is `src/text_to_sql_agent/repositories/mcp_client_repository.py`.
+
+### MCP Setup Reference
+
+Operational setup guidance for SQLite, PostgreSQL, and Athena MCP servers is documented in `README.md`.
+
+Setup documentation covers:
+- required infrastructure-side environment inputs per dialect,
+- recommended authentication approach for local and production environments,
+- run-command templates for starting external MCP servers,
+- cheap preflight validation commands before application integration,
+- contract-level validation order using `mcp.db.health`, `mcp.db.schema`, and `mcp.db.execute`.
+
+Architectural assumption:
+- MCP servers remain external infrastructure components and are not embedded into this repository runtime.
 
 ### Testability
 

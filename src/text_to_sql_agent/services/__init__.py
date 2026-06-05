@@ -33,6 +33,11 @@ from .conversation_history_service import (
     ConversationHistoryRecord,
     ConversationHistoryService,
 )
+from .mcp_security_policy import (
+    MCPSecurityValidationResult,
+    enforce_mcp_sql_policy,
+    validate_mcp_sql_policy,
+)
 
 __all__ = [
     "AuthError",
@@ -43,6 +48,9 @@ __all__ = [
     "ConversationAccessError",
     "ConversationHistoryRecord",
     "ConversationHistoryService",
+    "MCPSecurityValidationResult",
+    "enforce_mcp_sql_policy",
+    "validate_mcp_sql_policy",
     "build_snapshot_id",
     "build_schema_documents",
     "index_schema_embeddings",

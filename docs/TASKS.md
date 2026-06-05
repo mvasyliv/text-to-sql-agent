@@ -19,68 +19,32 @@ Rules:
 
 ### Priority Phases (MVP -> Production Hardening)
 
-1. Phase 1 - MVP Enablement
-	- T-2026-06-05-103: Add MCP server setup docs for SQLite, PostgreSQL, and Athena.
-	- T-2026-06-05-109: Add runtime settings for MCP servers by dialect.
-2. Phase 2 - MVP Delivery
-	- T-2026-06-05-104: Add abstract MCP client contract for DB operations.
-	- T-2026-06-05-105: Implement SQLite MCP query execution adapter.
-	- T-2026-06-05-106: Implement PostgreSQL MCP query execution adapter.
-	- T-2026-06-05-107: Implement Athena MCP query execution adapter.
-	- T-2026-06-05-108: Wire query execution agent to dialect-aware MCP adapter factory.
-3. Phase 3 - Production Hardening
-	- T-2026-06-05-110: Add MCP security policy layer for read-only SQL enforcement.
-	- T-2026-06-05-111: Add MCP audit logging and observability for DB tools.
-	- T-2026-06-05-112: Add MCP integration tests for multi-dialect query execution.
+1. Phase 3 - Production Hardening
+	- No open tasks.
 
 ### Execution Order And Dependencies
 
-P1 (MVP Enablement)
-1. T-2026-06-05-103
-	- Depends on: T-2026-06-05-102
-2. T-2026-06-05-109
-	- Depends on: T-2026-06-05-102
-
-P2 (MVP Delivery)
-1. T-2026-06-05-104
-	- Depends on: T-2026-06-05-102, T-2026-06-05-109
-2. T-2026-06-05-105
-	- Depends on: T-2026-06-05-104
-3. T-2026-06-05-106
-	- Depends on: T-2026-06-05-104
-4. T-2026-06-05-107
-	- Depends on: T-2026-06-05-104
-5. T-2026-06-05-108
-	- Depends on: T-2026-06-05-105, T-2026-06-05-106, T-2026-06-05-107
-
 P3 (Production Hardening)
-1. T-2026-06-05-110
-	- Depends on: T-2026-06-05-108
-2. T-2026-06-05-111
-	- Depends on: T-2026-06-05-108
-3. T-2026-06-05-112
-	- Depends on: T-2026-06-05-110, T-2026-06-05-111
+	- None
 
 Critical path
-- D-2026-06-05-023 -> T-2026-06-05-109 -> T-2026-06-05-104 -> T-2026-06-05-105/106/107 -> T-2026-06-05-108 -> T-2026-06-05-110 -> T-2026-06-05-112
-
-| ID | Date | Title | Status | Summary | Related Files |
-| --- | --- | --- | --- | --- | --- |
-| T-2026-06-05-112 | 2026-06-05 | Add MCP integration tests for multi-dialect query execution | planned | Add focused integration tests that validate successful and denied query paths through MCP adapters for SQLite, PostgreSQL, and Athena, including timeout and error-shape assertions. | `tests/text_to_sql_agent/repositories/`, `tests/text_to_sql_agent/agents/`, `docs/TASKS.md` |
-| T-2026-06-05-111 | 2026-06-05 | Add MCP audit logging and observability for DB tools | planned | Emit structured audit events for MCP DB operations with request metadata, execution status, latency, and policy decisions, then expose them in existing trace outputs. | `src/text_to_sql_agent/services/audit_trail.py`, `src/text_to_sql_agent/graphs/query_state.py`, `src/text_to_sql_agent/agents/query_execution_agent.py`, `docs/TASKS.md` |
-| T-2026-06-05-110 | 2026-06-05 | Add MCP security policy layer for read-only SQL enforcement | planned | Implement a shared policy module that enforces SELECT/WITH-only execution, schema allowlists, and denied-operation checks before any MCP database call. | `src/text_to_sql_agent/services/`, `src/text_to_sql_agent/agents/security_guard_agent.py`, `src/text_to_sql_agent/agents/query_execution_agent.py`, `docs/TASKS.md` |
-| T-2026-06-05-109 | 2026-06-05 | Add runtime settings for MCP servers by dialect | planned | Extend runtime configuration to define MCP endpoint, transport, credentials source, and timeout settings for SQLite, PostgreSQL, and Athena adapters. | `src/text_to_sql_agent/config/settings.py`, `src/text_to_sql_agent/config/__init__.py`, `.env`, `.env.dev`, `.env.prod`, `.env.test`, `docs/TASKS.md` |
-| T-2026-06-05-108 | 2026-06-05 | Wire query execution agent to dialect-aware MCP adapter factory | planned | Introduce a dialect-aware adapter factory and route query execution through it so each configured dialect uses its dedicated MCP client implementation. | `src/text_to_sql_agent/agents/query_execution_agent.py`, `src/text_to_sql_agent/repositories/query_execution_factory.py`, `src/text_to_sql_agent/repositories/`, `docs/TASKS.md` |
-| T-2026-06-05-107 | 2026-06-05 | Implement Athena MCP query execution adapter | planned | Add an Athena MCP adapter that executes approved SQL, normalizes result payloads, and maps remote errors into project-standard execution failures. | `src/text_to_sql_agent/repositories/`, `tests/text_to_sql_agent/repositories/`, `docs/TASKS.md` |
-| T-2026-06-05-106 | 2026-06-05 | Implement PostgreSQL MCP query execution adapter | planned | Add a PostgreSQL MCP adapter that executes approved SQL, normalizes result payloads, and maps remote errors into project-standard execution failures. | `src/text_to_sql_agent/repositories/`, `tests/text_to_sql_agent/repositories/`, `docs/TASKS.md` |
-| T-2026-06-05-105 | 2026-06-05 | Implement SQLite MCP query execution adapter | planned | Add a SQLite MCP adapter that executes approved SQL, normalizes result payloads, and maps remote errors into project-standard execution failures. | `src/text_to_sql_agent/repositories/`, `tests/text_to_sql_agent/repositories/`, `docs/TASKS.md` |
-| T-2026-06-05-104 | 2026-06-05 | Add abstract MCP client contract for DB operations | planned | Define a reusable MCP client interface and shared response model for DB query execution, schema fetch, and health-check operations across dialect adapters. | `src/text_to_sql_agent/repositories/`, `src/text_to_sql_agent/models/`, `tests/text_to_sql_agent/repositories/`, `docs/TASKS.md` |
-| T-2026-06-05-103 | 2026-06-05 | Add MCP server setup docs for SQLite, PostgreSQL, and Athena | planned | Document local and production MCP server setup, required environment variables, authentication approach, and per-dialect run/validation commands. | `README.md`, `docs/ARCHITECTURE.md`, `docs/TASKS.md` |
+- D-2026-06-05-023
 
 ## COMPLETED
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-06-05-113 | 2026-06-05 | Add MCP server launch scripts for SQLite, PostgreSQL, and Athena | done | Added convenience shell launchers that source repository env files, run basic preflight checks, and start the dialect-specific MCP server commands for SQLite, PostgreSQL, and Athena. | `run_mcp_server_sqlite.sh`, `run_mcp_server_postgresql.sh`, `run_mcp_server_athena.sh`, `README.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-112 | 2026-06-05 | Add MCP integration tests for multi-dialect query execution | done | Added focused integration tests that validate successful and denied query paths through MCP adapters for SQLite, PostgreSQL, and Athena, including timeout propagation and error-shape assertions. | `tests/text_to_sql_agent/repositories/test_query_execution_mcp_integration.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-111 | 2026-06-05 | Add MCP audit logging and observability for DB tools | done | Added structured MCP DB operation audit events with request metadata, execution status, latency, and policy decision metadata, and exposed them through existing `agent_events` and `AuditTrail` outputs. | `src/text_to_sql_agent/models/trace.py`, `src/text_to_sql_agent/services/audit_trail.py`, `src/text_to_sql_agent/agents/query_execution_agent.py`, `tests/text_to_sql_agent/models/test_trace.py`, `tests/text_to_sql_agent/services/test_audit_trail.py`, `tests/text_to_sql_agent/agents/test_query_execution_agent.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-110 | 2026-06-05 | Add MCP security policy layer for read-only SQL enforcement | done | Added shared MCP security policy enforcement for SELECT/WITH-only entrypoints, denied-operation checks, and schema allowlists before execution; integrated into query execution and aligned security guard validation with focused tests. | `src/text_to_sql_agent/services/mcp_security_policy.py`, `src/text_to_sql_agent/services/__init__.py`, `src/text_to_sql_agent/agents/query_execution_agent.py`, `src/text_to_sql_agent/agents/security_guard_agent.py`, `tests/text_to_sql_agent/services/test_mcp_security_policy.py`, `tests/text_to_sql_agent/agents/test_query_execution_agent.py`, `tests/text_to_sql_agent/agents/test_security_guard_agent.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-108 | 2026-06-05 | Wire query execution agent to dialect-aware MCP adapter factory | done | Routed query execution through a dialect-aware MCP-backed factory so SQLite, PostgreSQL, and Athena execution paths resolve dedicated MCP adapters with unified execution payload handling. | `src/text_to_sql_agent/agents/query_execution_agent.py`, `src/text_to_sql_agent/repositories/query_execution_factory.py`, `tests/text_to_sql_agent/agents/test_query_execution_agent.py`, `tests/text_to_sql_agent/repositories/test_query_execution_repository.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-107 | 2026-06-05 | Implement Athena MCP query execution adapter | done | Added `AthenaMCPClientRepository` as a concrete MCP adapter with canonical execute/schema/health behavior for Athena, including normalized success/error payload mapping through an invoker boundary and focused repository tests. | `src/text_to_sql_agent/repositories/athena_mcp_client_repository.py`, `src/text_to_sql_agent/repositories/__init__.py`, `tests/text_to_sql_agent/repositories/test_athena_mcp_client_repository.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-106 | 2026-06-05 | Implement PostgreSQL MCP query execution adapter | done | Added `PostgreSQLMCPClientRepository` as a concrete MCP adapter with canonical execute/schema/health behavior for PostgreSQL, including normalized success/error payload mapping and focused repository tests. | `src/text_to_sql_agent/repositories/postgresql_mcp_client_repository.py`, `src/text_to_sql_agent/repositories/__init__.py`, `tests/text_to_sql_agent/repositories/test_postgresql_mcp_client_repository.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-105 | 2026-06-05 | Implement SQLite MCP query execution adapter | done | Added `SQLiteMCPClientRepository` as the first concrete MCP adapter with canonical execute/schema/health behavior for SQLite, including normalized success/error payload mapping and focused repository tests. | `src/text_to_sql_agent/repositories/sqlite_mcp_client_repository.py`, `src/text_to_sql_agent/repositories/__init__.py`, `tests/text_to_sql_agent/repositories/test_sqlite_mcp_client_repository.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-104 | 2026-06-05 | Add abstract MCP client contract for DB operations | done | Added `MCPClientRepository` as the repository-layer abstract contract for canonical MCP execute/schema/health operations and added focused abstract-interface tests. | `src/text_to_sql_agent/repositories/mcp_client_repository.py`, `src/text_to_sql_agent/repositories/__init__.py`, `tests/text_to_sql_agent/repositories/test_mcp_client_repository.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-109 | 2026-06-05 | Add runtime settings for MCP servers by dialect | done | Added typed runtime settings for SQLite, PostgreSQL, and Athena MCP adapters, including endpoint, transport, credentials source, and timeout loading from environment files and focused config tests. | `src/text_to_sql_agent/config/settings.py`, `src/text_to_sql_agent/config/__init__.py`, `tests/text_to_sql_agent/config/test_mcp_runtime_settings.py`, `.env`, `.env.dev`, `.env.prod`, `.env.test`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-06-05-103 | 2026-06-05 | Add MCP server setup docs for SQLite, PostgreSQL, and Athena | done | Documented local and production MCP setup guidance for SQLite, PostgreSQL, and Athena, including required environment inputs, authentication guidance, run-command templates, and validation workflow. | `README.md`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-05-102 | 2026-06-05 | Define MCP tool contract for SQL execution and schema access | done | Added canonical MCP tool contract v1 for execute/schema/health operations, including typed request/response payload models and error taxonomy, and documented the contract in architecture. | `src/text_to_sql_agent/models/mcp_contract.py`, `src/text_to_sql_agent/models/__init__.py`, `tests/text_to_sql_agent/models/test_mcp_contract.py`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-05-101 | 2026-06-05 | Create MCP integration architecture decision record | done | Captured the MCP integration architecture decision for SQLite, PostgreSQL, and Athena, including boundary, security baseline, reliability requirements, and phased rollout constraints. | `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-05-100 | 2026-06-05 | Add Field descriptions to SchemaSnapshotRef core attributes | done | Updated `SchemaSnapshotRef` in `lifecycle.py` to define core attributes with explicit Pydantic `Field(description=...)` metadata while preserving existing model behavior. | `src/text_to_sql_agent/models/lifecycle.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |

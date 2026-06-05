@@ -59,6 +59,19 @@ def test_execute_approved_query_rejects_non_read_only(tmp_path):
         assert "read-only" in str(exc)
 
 
+def test_execute_approved_query_rejects_disallowed_schema_before_execution():
+    try:
+        execute_approved_query(
+            database_id="db1",
+            dialect="sqlite",
+            sql_query="SELECT * FROM secret.users",
+            connection_config={"mcp_allowed_schemas": ["main"]},
+        )
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "schema_not_allowed:secret" in str(exc)
+
+
 def test_build_query_execution_node_stub_mode_without_config():
     node = build_query_execution_node(None)
     result = node(
@@ -92,6 +105,10 @@ def test_build_query_execution_node_real_mode(tmp_path):
     assert result["execution_error"] is None
     assert result["execution_result"]["row_count"] == 1
     assert result["status"] == "post_processing"
+    mcp_events = [e for e in result["agent_events"] if e["event_type"] == "mcp_db_operation"]
+    assert len(mcp_events) == 1
+    assert mcp_events[0]["metadata"]["request"]["tool_name"] == "mcp.db.execute"
+    assert mcp_events[0]["metadata"]["execution"]["status"] == "ok"
 
 
 def test_build_query_execution_node_failure_on_invalid_sql():
@@ -108,3 +125,7 @@ def test_build_query_execution_node_failure_on_invalid_sql():
     assert result["execution_result"] is None
     assert result["status"] == "failed"
     assert "read-only" in result["execution_error"]
+    mcp_events = [e for e in result["agent_events"] if e["event_type"] == "mcp_db_operation"]
+    assert len(mcp_events) == 1
+    assert mcp_events[0]["metadata"]["execution"]["status"] == "error"
+    assert mcp_events[0]["metadata"]["policy"]["approved"] is False

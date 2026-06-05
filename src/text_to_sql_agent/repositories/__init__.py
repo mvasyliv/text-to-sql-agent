@@ -12,6 +12,10 @@ from .session_repository import InMemorySessionRepository, SessionRepository
 from .sqlite_auth_repository import SQLiteAuthRepository
 from .sqlite_session_repository import SQLiteSessionRepository
 from .query_execution_repository import QueryExecutionRepository
+from .mcp_client_repository import MCPClientRepository
+from .sqlite_mcp_client_repository import SQLiteMCPClientRepository
+from .postgresql_mcp_client_repository import PostgreSQLMCPClientRepository
+from .athena_mcp_client_repository import AthenaMCPClientRepository
 from .sqlite_query_execution_repository import SQLiteQueryExecutionRepository
 from .query_execution_factory import get_query_execution_repository
 
@@ -32,6 +36,10 @@ __all__ = [
     "SQLiteAuthRepository",
     "SQLiteSessionRepository",
     "QueryExecutionRepository",
+    "MCPClientRepository",
+    "SQLiteMCPClientRepository",
+    "PostgreSQLMCPClientRepository",
+    "AthenaMCPClientRepository",
     "SQLiteQueryExecutionRepository",
     "get_query_execution_repository",
 ]

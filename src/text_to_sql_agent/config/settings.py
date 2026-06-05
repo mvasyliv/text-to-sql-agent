@@ -35,6 +35,60 @@ class ConversationAuthSettings(BaseModel):
     )
 
 
+class MCPDialectSettings(BaseModel):
+    """Runtime settings for one dialect-specific MCP adapter endpoint."""
+
+    endpoint: str | None = Field(
+        default=None,
+        description="MCP endpoint URL, command, or transport target for this dialect.",
+    )
+    transport: str = Field(
+        default="stdio",
+        description="Transport mode used by the MCP adapter (stdio, http, or sse).",
+    )
+    credentials_source: str = Field(
+        default="none",
+        description="Credential source policy (none, env, aws, or file).",
+    )
+    timeout_ms: int = Field(
+        default=30000,
+        ge=1,
+        description="Request timeout in milliseconds for this dialect adapter.",
+    )
+
+
+class MCPRuntimeSettings(BaseModel):
+    """Runtime settings for MCP-backed database adapters by dialect."""
+
+    sqlite: MCPDialectSettings = Field(
+        default_factory=lambda: MCPDialectSettings(
+            endpoint=None,
+            transport="stdio",
+            credentials_source="none",
+            timeout_ms=30000,
+        ),
+        description="MCP adapter runtime settings for SQLite.",
+    )
+    postgresql: MCPDialectSettings = Field(
+        default_factory=lambda: MCPDialectSettings(
+            endpoint=None,
+            transport="stdio",
+            credentials_source="env",
+            timeout_ms=30000,
+        ),
+        description="MCP adapter runtime settings for PostgreSQL.",
+    )
+    athena: MCPDialectSettings = Field(
+        default_factory=lambda: MCPDialectSettings(
+            endpoint=None,
+            transport="stdio",
+            credentials_source="aws",
+            timeout_ms=120000,
+        ),
+        description="MCP adapter runtime settings for Athena.",
+    )
+
+
 def load_conversation_auth_settings(env: Mapping[str, str] | None = None) -> ConversationAuthSettings:
     """Load conversation DB path and auth policy flags from environment variables."""
     values = env if env is not None else os.environ
@@ -52,6 +106,69 @@ def load_conversation_auth_settings(env: Mapping[str, str] | None = None) -> Con
             values.get("AUTH_MIN_PASSWORD_LENGTH"),
             default=8,
             minimum=4,
+        ),
+    )
+
+
+def load_mcp_runtime_settings(env: Mapping[str, str] | None = None) -> MCPRuntimeSettings:
+    """Load dialect-specific MCP adapter settings from environment variables."""
+    values = env if env is not None else os.environ
+    return MCPRuntimeSettings(
+        sqlite=MCPDialectSettings(
+            endpoint=_parse_optional_str(_first_env_value(values, "MCP_SQLITE_ENDPOINT")),
+            transport=_parse_env_choice(
+                _first_env_value(values, "MCP_SQLITE_TRANSPORT"),
+                default="stdio",
+                allowed={"stdio", "http", "sse"},
+            ),
+            credentials_source=_parse_env_choice(
+                _first_env_value(values, "MCP_SQLITE_CREDENTIALS_SOURCE"),
+                default="none",
+                allowed={"none", "env", "aws", "file"},
+            ),
+            timeout_ms=_parse_env_int(
+                _first_env_value(values, "MCP_SQLITE_TIMEOUT_MS"),
+                default=30000,
+                minimum=1,
+            ),
+        ),
+        postgresql=MCPDialectSettings(
+            endpoint=_parse_optional_str(
+                _first_env_value(values, "MCP_POSTGRESQL_ENDPOINT", "MCP_PG_ENDPOINT"),
+            ),
+            transport=_parse_env_choice(
+                _first_env_value(values, "MCP_POSTGRESQL_TRANSPORT", "MCP_PG_TRANSPORT"),
+                default="stdio",
+                allowed={"stdio", "http", "sse"},
+            ),
+            credentials_source=_parse_env_choice(
+                _first_env_value(values, "MCP_POSTGRESQL_CREDENTIALS_SOURCE", "MCP_PG_CREDENTIALS_SOURCE"),
+                default="env",
+                allowed={"none", "env", "aws", "file"},
+            ),
+            timeout_ms=_parse_env_int(
+                _first_env_value(values, "MCP_POSTGRESQL_TIMEOUT_MS", "MCP_PG_TIMEOUT_MS"),
+                default=30000,
+                minimum=1,
+            ),
+        ),
+        athena=MCPDialectSettings(
+            endpoint=_parse_optional_str(_first_env_value(values, "MCP_ATHENA_ENDPOINT")),
+            transport=_parse_env_choice(
+                _first_env_value(values, "MCP_ATHENA_TRANSPORT"),
+                default="stdio",
+                allowed={"stdio", "http", "sse"},
+            ),
+            credentials_source=_parse_env_choice(
+                _first_env_value(values, "MCP_ATHENA_CREDENTIALS_SOURCE"),
+                default="aws",
+                allowed={"none", "env", "aws", "file"},
+            ),
+            timeout_ms=_parse_env_int(
+                _first_env_value(values, "MCP_ATHENA_TIMEOUT_MS"),
+                default=120000,
+                minimum=1,
+            ),
         ),
     )
 
@@ -142,6 +259,30 @@ def _parse_env_int(raw: str | None, *, default: int, minimum: int | None = None)
     if minimum is not None and value < minimum:
         return minimum
     return value
+
+
+def _parse_env_choice(raw: str | None, *, default: str, allowed: set[str]) -> str:
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in allowed:
+        return normalized
+    return default
+
+
+def _parse_optional_str(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    normalized = raw.strip()
+    return normalized or None
+
+
+def _first_env_value(values: Mapping[str, str], *keys: str) -> str | None:
+    for key in keys:
+        value = values.get(key)
+        if value is not None:
+            return value
+    return None
 
 
 def _environment_file_name(environment: str) -> str:

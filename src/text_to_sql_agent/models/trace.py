@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 AgentEventType = Literal[
+    "mcp_db_operation",
     "schema_context_loaded",
     "sql_generated",
     "syntax_validated",

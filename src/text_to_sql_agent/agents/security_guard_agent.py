@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass
 
 from text_to_sql_agent.services.audit_trail import make_agent_event
+from text_to_sql_agent.services.mcp_security_policy import validate_mcp_sql_policy
 
 
 _DISALLOWED_OPERATIONS = (
@@ -67,18 +68,14 @@ def validate_sql_security(sql: str) -> SQLSecurityValidationResult:
         raise TypeError("SQL must be a string")
 
     normalized = sql.strip()
+    policy_result = validate_mcp_sql_policy(normalized)
     violations: list[str] = []
 
-    if not normalized:
-        violations.append("empty_sql")
-        return SQLSecurityValidationResult(approved=False, violations=violations)
-
-    if not _starts_read_only(normalized):
-        violations.append("non_read_only_entrypoint")
-
-    blocked = _contains_disallowed_operation(normalized)
-    if blocked is not None:
-        violations.append(blocked)
+    for violation in policy_result.violations:
+        if violation.startswith("denied_operation:"):
+            violations.append(violation.split(":", maxsplit=1)[1])
+        else:
+            violations.append(violation)
 
     violations.extend(_contains_suspicious_pattern(normalized))
 

@@ -1,7 +1,11 @@
 """Tests for the audit_trail service."""
 
 from text_to_sql_agent.models.trace import AgentEvent, AuditTrail
-from text_to_sql_agent.services.audit_trail import build_audit_trail, make_agent_event
+from text_to_sql_agent.services.audit_trail import (
+    build_audit_trail,
+    make_agent_event,
+    make_mcp_db_audit_event,
+)
 
 
 class TestMakeAgentEvent:
@@ -43,6 +47,34 @@ class TestMakeAgentEvent:
         raw = make_agent_event(agent="syntax_validator", event_type="syntax_validated", status="ok")
         event = AgentEvent.model_validate(raw)
         assert event.agent == "syntax_validator"
+
+    def test_make_mcp_db_audit_event_has_structured_metadata(self):
+        raw = make_mcp_db_audit_event(
+            user_id="u1",
+            conversation_id="c1",
+            message_id="m1",
+            request_metadata={
+                "request_id": "req-1",
+                "tool_name": "mcp.db.execute",
+                "database_id": "db-main",
+                "dialect": "sqlite",
+                "timeout_ms": 30000,
+                "row_limit": None,
+            },
+            execution_status="ok",
+            latency_ms=18,
+            row_count=2,
+            policy_decision={
+                "approved": True,
+                "violations": [],
+                "referenced_schemas": [],
+            },
+        )
+
+        assert raw["event_type"] == "mcp_db_operation"
+        assert raw["metadata"]["request"]["tool_name"] == "mcp.db.execute"
+        assert raw["metadata"]["execution"]["latency_ms"] == 18
+        assert raw["metadata"]["policy"]["approved"] is True
 
 
 class TestBuildAuditTrail:

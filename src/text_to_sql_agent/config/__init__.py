@@ -17,7 +17,10 @@ from text_to_sql_agent.config.secrets import (
 )
 from text_to_sql_agent.config.settings import (
     ConversationAuthSettings,
+    MCPDialectSettings,
+    MCPRuntimeSettings,
     load_conversation_auth_settings,
+    load_mcp_runtime_settings,
     load_runtime_environment,
 )
 
@@ -29,7 +32,10 @@ __all__ = [
     "SecretResolutionError",
     "SecretResolutionResult",
     "ConversationAuthSettings",
+    "MCPDialectSettings",
+    "MCPRuntimeSettings",
     "load_conversation_auth_settings",
+    "load_mcp_runtime_settings",
     "load_runtime_environment",
     "setup_logging",
     "get_logger",

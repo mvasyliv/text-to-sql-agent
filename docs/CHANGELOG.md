@@ -13,6 +13,77 @@ _None_
 
 ### Added
 
+- Added convenience MCP server launch scripts (T-2026-06-05-113):
+  - `run_mcp_server_sqlite.sh`
+  - `run_mcp_server_postgresql.sh`
+  - `run_mcp_server_athena.sh`
+  - Documented the launchers in `README.md` and aligned them with the repository's MCP setup guidance.
+
+- Added multi-dialect MCP query execution integration tests (T-2026-06-05-112):
+  - New focused test coverage for SQLite, PostgreSQL, and Athena query execution via the MCP-backed factory.
+  - Verified success payloads, read-only denial shapes, timeout propagation, and adapter-level error responses.
+
+- Added MCP audit logging and observability for DB tools (T-2026-06-05-111):
+  - Added `mcp_db_operation` event type in `src/text_to_sql_agent/models/trace.py`.
+  - Added `make_mcp_db_audit_event()` in `src/text_to_sql_agent/services/audit_trail.py` for structured MCP DB operation event emission.
+  - Updated `src/text_to_sql_agent/agents/query_execution_agent.py` to emit structured MCP audit events with request metadata, execution status, latency, and policy decision metadata.
+  - Added/updated focused tests in `tests/text_to_sql_agent/models/test_trace.py`, `tests/text_to_sql_agent/services/test_audit_trail.py`, and `tests/text_to_sql_agent/agents/test_query_execution_agent.py`.
+  - Updated `docs/ARCHITECTURE.md` to record how MCP audit events are exposed through existing trace outputs.
+
+- Added shared MCP security policy layer (T-2026-06-05-110):
+  - Added `src/text_to_sql_agent/services/mcp_security_policy.py` with shared policy validation and enforcement for read-only entrypoints, denied operations, and optional schema allowlists.
+  - Updated `src/text_to_sql_agent/agents/query_execution_agent.py` to enforce policy before any MCP-backed query execution.
+  - Updated `src/text_to_sql_agent/agents/security_guard_agent.py` to reuse shared policy validation and keep suspicious-pattern detection behavior.
+  - Exported policy helpers from `src/text_to_sql_agent/services/__init__.py`.
+  - Added focused tests in `tests/text_to_sql_agent/services/test_mcp_security_policy.py` and extended focused agent tests in `tests/text_to_sql_agent/agents/test_query_execution_agent.py`.
+  - Updated `docs/ARCHITECTURE.md` to record the shared pre-execution MCP policy boundary.
+
+- Wired query execution agent to dialect-aware MCP adapter factory (T-2026-06-05-108):
+  - Updated `src/text_to_sql_agent/repositories/query_execution_factory.py` to construct dialect-specific MCP adapters for SQLite, PostgreSQL, and Athena.
+  - Added MCP-backed query execution wrapper behavior that maps canonical MCP execute payloads into the existing execution result shape.
+  - Updated `src/text_to_sql_agent/agents/query_execution_agent.py` to pass runtime connection config into the dialect-aware factory.
+  - Updated focused tests in `tests/text_to_sql_agent/repositories/test_query_execution_repository.py` and validated `tests/text_to_sql_agent/agents/test_query_execution_agent.py`.
+  - Updated `docs/ARCHITECTURE.md` to document that query execution now uses the MCP-backed dialect-aware factory path.
+
+- Added Athena concrete MCP query execution adapter (T-2026-06-05-107):
+  - Added `src/text_to_sql_agent/repositories/athena_mcp_client_repository.py` implementing canonical `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health` operations for Athena via an invoker boundary.
+  - Added normalized success/error envelope mapping for execution, schema, and health flows, including timeout/transport error mapping.
+  - Exported `AthenaMCPClientRepository` from `src/text_to_sql_agent/repositories/__init__.py`.
+  - Added focused repository tests in `tests/text_to_sql_agent/repositories/test_athena_mcp_client_repository.py`.
+  - Updated `docs/ARCHITECTURE.md` to note all currently implemented concrete MCP adapters in the repository layer.
+
+- Added PostgreSQL concrete MCP query execution adapter (T-2026-06-05-106):
+  - Added `src/text_to_sql_agent/repositories/postgresql_mcp_client_repository.py` implementing canonical `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health` operations for PostgreSQL.
+  - Added normalized success/error envelope mapping for execution, schema, and health flows.
+  - Exported `PostgreSQLMCPClientRepository` from `src/text_to_sql_agent/repositories/__init__.py`.
+  - Added focused repository tests in `tests/text_to_sql_agent/repositories/test_postgresql_mcp_client_repository.py`.
+  - Updated `docs/ARCHITECTURE.md` to note concrete MCP adapters in the repository layer.
+
+- Added SQLite concrete MCP query execution adapter (T-2026-06-05-105):
+  - Added `src/text_to_sql_agent/repositories/sqlite_mcp_client_repository.py` implementing canonical `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health` operations for SQLite.
+  - Added normalized success/error envelope mapping for execution, schema, and health flows.
+  - Exported `SQLiteMCPClientRepository` from `src/text_to_sql_agent/repositories/__init__.py`.
+  - Added focused repository tests in `tests/text_to_sql_agent/repositories/test_sqlite_mcp_client_repository.py`.
+  - Updated `docs/ARCHITECTURE.md` to note the first concrete MCP adapter in the repository layer.
+
+- Added abstract MCP client repository contract (T-2026-06-05-104):
+  - Added `src/text_to_sql_agent/repositories/mcp_client_repository.py` with the canonical repository-layer interface for `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health` operations.
+  - Exported the contract from `src/text_to_sql_agent/repositories/__init__.py`.
+  - Added focused abstract-interface tests in `tests/text_to_sql_agent/repositories/test_mcp_client_repository.py`.
+  - Updated `docs/ARCHITECTURE.md` to record the repository-layer source of truth for MCP adapter behavior.
+
+- Added MCP runtime settings by dialect (T-2026-06-05-109):
+  - Added typed MCP adapter runtime settings and `load_mcp_runtime_settings()` in `src/text_to_sql_agent/config/settings.py`.
+  - Added config exports in `src/text_to_sql_agent/config/__init__.py`.
+  - Added focused config tests in `tests/text_to_sql_agent/config/test_mcp_runtime_settings.py`.
+  - Added explicit MCP config keys to `.env`, `.env.dev`, `.env.prod`, and `.env.test` for SQLite, PostgreSQL, and Athena.
+  - Updated `docs/ARCHITECTURE.md` with the canonical MCP runtime configuration keys.
+
+- Added MCP server setup guide for SQLite, PostgreSQL, and Athena (T-2026-06-05-103):
+  - Expanded `README.md` with required environment inputs, authentication guidance, startup command templates, and preflight validation commands.
+  - Documented contract-level validation flow using `mcp.db.health`, `mcp.db.schema`, and `mcp.db.execute`.
+  - Updated `docs/ARCHITECTURE.md` to point to the setup reference and clarify that MCP servers remain external infrastructure.
+
 - Added canonical MCP tool contract v1 for DB adapter integration (T-2026-06-05-102):
   - Added `src/text_to_sql_agent/models/mcp_contract.py` with typed request and response models for `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health`.
   - Added canonical error taxonomy codes and error envelope fields used by MCP adapter responses.
