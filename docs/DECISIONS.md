@@ -221,3 +221,15 @@ This setup remains local to your VS Code profile and does not appear in `git sta
 - Decision: The RFC defines project-specific scope, non-goals, migration rules, pilot modules, and rollout criteria, and should be consulted when planning new functional-core refactors.
 - Rationale: A single RFC keeps future migration work consistent and avoids re-deciding the same functional-style boundaries in each task.
 
+## D-2026-06-05-023
+
+- Date: 2026-06-05
+- Related task: T-2026-06-05-101
+- Decision: Database query execution for the text-to-SQL runtime will use MCP server adapters as the primary boundary for SQLite, PostgreSQL, and Athena.
+- Decision: MCP integration scope for this rollout is read-only SQL execution and schema-access tools needed by the query pipeline; direct destructive operations are out of scope.
+- Decision: Security baseline for MCP DB tools is deny-by-default with read-only enforcement (`SELECT`/`WITH`), explicit schema/table allowlists, and environment-based secret handling.
+- Decision: Reliability baseline requires explicit timeouts, bounded retries for transient transport failures, normalized error shapes, and structured audit events for allow/deny and execution outcomes.
+- Decision: Rollout will follow phased progression: (1) architecture and tool contract, (2) adapter implementation and factory wiring, (3) hardening with security policy, observability, and integration tests.
+- Decision: Existing repository and agent boundaries remain in place; MCP is introduced behind repository adapters so orchestration and UI layers keep stable interfaces.
+- Rationale: A dedicated MCP boundary centralizes execution control, improves auditability across dialects, limits secret exposure, and keeps future provider changes isolated from business orchestration.
+

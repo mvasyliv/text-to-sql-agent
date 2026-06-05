@@ -13,6 +13,19 @@ _None_
 
 ### Added
 
+- Added canonical MCP tool contract v1 for DB adapter integration (T-2026-06-05-102):
+  - Added `src/text_to_sql_agent/models/mcp_contract.py` with typed request and response models for `mcp.db.execute`, `mcp.db.schema`, and `mcp.db.health`.
+  - Added canonical error taxonomy codes and error envelope fields used by MCP adapter responses.
+  - Exported MCP contract models in `src/text_to_sql_agent/models/__init__.py`.
+  - Added focused model tests in `tests/text_to_sql_agent/models/test_mcp_contract.py`.
+  - Updated `docs/ARCHITECTURE.md` with canonical tool names, request/response baseline schemas, and error taxonomy.
+
+- Added MCP integration architecture decision and boundary definition (T-2026-06-05-101):
+  - Added D-2026-06-05-023 in `docs/DECISIONS.md` to adopt MCP-backed database access for SQLite, PostgreSQL, and Athena via repository adapters.
+  - Defined scope constraints for read-only query and schema-access tools, with destructive operations out of scope.
+  - Defined security and reliability baseline requirements (deny-by-default read-only policy, allowlists, timeouts/retries, normalized error contracts, structured audit events).
+  - Updated `docs/ARCHITECTURE.md` with MCP boundary constraints, lifecycle integration, and phased rollout sequence.
+
 - Added explicit Pydantic field descriptions for `SchemaSnapshotRef` core attributes (T-2026-06-05-100):
   - Updated `src/text_to_sql_agent/models/lifecycle.py` so `snapshot_id`, `database_id`, `dialect`, `created_at`, and `table_count` use `Field(description=...)` metadata.
   - Preserved existing runtime behavior while improving model metadata readability.

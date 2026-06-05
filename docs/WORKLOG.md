@@ -10,6 +10,31 @@ Rules:
 
 ## 2026-06-05
 
+### T-2026-06-05-102 - Define MCP tool contract for SQL execution and schema access
+
+- Added `src/text_to_sql_agent/models/mcp_contract.py` with canonical MCP tool contract v1 models.
+- Defined canonical tool names for adapter integration:
+  - `mcp.db.execute`
+  - `mcp.db.schema`
+  - `mcp.db.health`
+- Implemented typed request envelopes, success payloads, error envelopes, and canonical error taxonomy codes.
+- Exported new MCP contract models and type aliases from `src/text_to_sql_agent/models/__init__.py`.
+- Added focused tests in `tests/text_to_sql_agent/models/test_mcp_contract.py` for validation defaults, constraints, response envelopes, and taxonomy usage.
+- Updated `docs/ARCHITECTURE.md` with a dedicated MCP contract section describing canonical tool names, request/response schemas, and error taxonomy.
+- Updated `docs/TASKS.md` to mark T-2026-06-05-102 as completed and keep OPEN phase ordering aligned.
+- Validation:
+  - Ran focused test suite for MCP contract models.
+
+### T-2026-06-05-101 - Create MCP integration architecture decision record
+
+- Added durable architecture decision D-2026-06-05-023 in `docs/DECISIONS.md` for MCP-first database access across SQLite, PostgreSQL, and Athena.
+- Recorded explicit scope and non-scope boundaries: read-only query execution and schema-access tools via MCP adapters, with destructive operations out of scope.
+- Documented baseline controls: deny-by-default read-only policy, allowlist model, timeout/retry expectations, normalized error contracts, and structured audit events.
+- Updated `docs/ARCHITECTURE.md` to reflect MCP adapter boundary, request-lifecycle execution path, and phased rollout sequence.
+- Updated `docs/TASKS.md` to mark T-2026-06-05-101 as completed and align OPEN dependency references with the new decision ID.
+- Validation:
+  - Documentation-only task; no runtime code behavior changed.
+
 ### T-2026-06-05-100 - Add Field descriptions to SchemaSnapshotRef core attributes
 
 - Updated `src/text_to_sql_agent/models/lifecycle.py` so `SchemaSnapshotRef` core attributes use explicit `Field(description=...)` metadata.

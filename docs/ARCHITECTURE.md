@@ -188,6 +188,10 @@ Current auth/history configuration keys:
 
 These are loaded through `load_conversation_auth_settings()`.
 
+Current MCP direction for query execution:
+- SQLite, PostgreSQL, and Athena access is planned through MCP-backed repository adapters.
+- MCP adapter integration follows decision D-2026-06-05-023 and keeps graph, service, and UI contracts stable.
+
 ## Auth and User-Scoped History Architecture
 
 The web runtime uses username/password authentication with user-isolated history.
@@ -285,7 +289,7 @@ The model produces a candidate SQL statement or structured intermediate represen
 The system checks the generated output for allowed dialect rules, disallowed operations, and structural correctness before execution.
 
 7. Query execution
-A repository executes the approved SQL against the configured database.
+A repository executes the approved SQL against the configured database, using MCP-backed adapters for supported dialects when enabled.
 
 8. Result shaping
 Services convert raw rows into a response that can include tabular data, summaries, and execution metadata.
@@ -318,6 +322,61 @@ Useful signals include:
 - validation failures
 - execution timing
 - query errors and fallback paths
+
+### MCP Server Boundary for Database Access
+
+For query execution and schema-access tools, the preferred runtime boundary is MCP server integration through dialect-aware repository adapters.
+
+Architecture constraints for this boundary:
+- adapters are provided per dialect (SQLite, PostgreSQL, Athena) behind a shared repository contract,
+- orchestration and agent layers call the existing repository boundary and do not depend on transport details,
+- SQL policy checks remain enforced before adapter execution,
+- adapter outputs are normalized into project execution payloads and error contracts.
+
+Operational baseline for MCP tools:
+- read-only execution policy with deny-by-default behavior,
+- explicit timeout and retry controls,
+- structured audit events for allowed and denied operations,
+- environment-based configuration and secret resolution.
+
+Rollout sequence:
+1. define tool contracts and runtime settings,
+2. implement adapters and factory wiring,
+3. harden with policy, observability, and integration tests.
+
+### MCP Tool Contract (Canonical v1)
+
+Canonical MCP tool names used by repository adapters:
+- `mcp.db.execute` for approved read-only SQL execution,
+- `mcp.db.schema` for schema metadata retrieval,
+- `mcp.db.health` for adapter/server health probing.
+
+Request contract baseline:
+- shared metadata envelope with `request_id`, optional `conversation_id`, optional `user_id`, and `issued_at`,
+- required `dialect` values: `sqlite`, `postgresql`, `athena`,
+- required `database_id` for all tools,
+- tool-specific payload fields:
+  - execute: `sql`, `parameters`, `row_limit`, `timeout_ms`,
+  - schema: `schema_names`, `table_names`, `include_views`,
+  - health: `timeout_ms`.
+
+Response contract baseline:
+- success envelope with `status=success` and tool-specific `result` payload,
+- error envelope with `status=error` and canonical error object,
+- canonical error fields: `code`, `message`, `retriable`, `details`.
+
+Error taxonomy baseline:
+- `invalid_request`
+- `forbidden_operation`
+- `unauthorized`
+- `unsupported_dialect`
+- `tool_unavailable`
+- `timeout`
+- `execution_failed`
+- `schema_not_found`
+- `transport_error`
+
+Typed source of truth for this contract is `src/text_to_sql_agent/models/mcp_contract.py`.
 
 ### Testability
 
