@@ -10,6 +10,15 @@ Rules:
 
 ## 2026-06-08
 
+### T-2026-06-08-117 - Persist sqlite MCP server executable via managed dependency
+
+- Diagnosed launcher failure: `run_mcp_server_sqlite.sh` resolved `MCP_SQLITE_SERVER_CMD=venvtext2sql/bin/sqlite-mcp-server`, but the executable was missing from `venvtext2sql`.
+- Added `sqlite-mcp-server` to managed project dependencies (`pyproject.toml`, `uv.lock`) using `uv add sqlite-mcp-server`.
+- Synced locked dependencies into the canonical environment with `UV_PROJECT_ENVIRONMENT=venvtext2sql uv sync`.
+- Validation:
+  - Verified executable presence: `test -x /home/mykola/prj_p/text-to-sql-agent/venvtext2sql/bin/sqlite-mcp-server` -> exists.
+  - Ran launcher smoke check with timeout: `timeout 3s /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_sqlite.sh` produced no command-not-found error.
+
 ### T-2026-06-08-116 - Add README link to JetBrains venv checklist
 
 - Updated `README.md` with a short Quick Setup note that links to `docs/JETBRAINS_VENV_CHECKLIST.md`.

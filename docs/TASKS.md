@@ -34,6 +34,7 @@ Critical path
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-06-08-117 | 2026-06-08 | Persist sqlite MCP server executable via managed dependency | done | Added `sqlite-mcp-server` to managed dependencies and synced `venvtext2sql` so `run_mcp_server_sqlite.sh` no longer fails with command-not-found for `venvtext2sql/bin/sqlite-mcp-server`. | `pyproject.toml`, `uv.lock`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-08-116 | 2026-06-08 | Add README link to JetBrains venv checklist | done | Added a short README setup note linking to the JetBrains `venvtext2sql` activation checklist so new contributors can find it quickly. | `README.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-08-115 | 2026-06-08 | Add JetBrains venv activation checklist for project open workflow | done | Added a minimal JetBrains-specific checklist to standardize interpreter and terminal activation checks for `venvtext2sql` when opening the project. | `docs/JETBRAINS_VENV_CHECKLIST.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-08-114 | 2026-06-08 | Configure persistent SQLite MCP server executable in dev environment | done | Installed `sqlite-mcp-server` into the canonical virtual environment and configured `.env.dev` to set `MCP_SQLITE_SERVER_CMD`, enabling `run_mcp_server_sqlite.sh` without manual command-prefix overrides. | `.env.dev`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |

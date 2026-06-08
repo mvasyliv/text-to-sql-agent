@@ -3532,6 +3532,18 @@ wheels = [
 ]
 
 [[package]]
+name = "sqlite-mcp-server"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/45/da3aa0cf6b9b2a2b616e5e4e740a61cff7c47aefeeaf2f2db67d5d241b90/sqlite_mcp_server-0.1.7.tar.gz", hash = "sha256:006ff0347620db419bf23ef5132e4339b5e0fe97f653ecec1188c308ff358853", size = 51382, upload-time = "2026-04-19T13:51:44.508Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/af/3827af9c8c010d8e89dd7660cec96a1f2188cea631a2bf0941cd2a3448f0/sqlite_mcp_server-0.1.7-py3-none-any.whl", hash = "sha256:efab654e7c6da2cb8a90eddd3c290b743e68d9af60b72efe2c51db39854c265c", size = 7413, upload-time = "2026-04-19T13:51:43.199Z" },
+]
+
+[[package]]
 name = "sse-starlette"
 version = "3.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -3593,6 +3605,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+    { name = "sqlite-mcp-server" },
 ]
 
 [package.metadata]
@@ -3614,6 +3627,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", specifier = ">=0.15.12" },
     { name = "sqlalchemy", specifier = ">=2.0.49" },
+    { name = "sqlite-mcp-server", specifier = ">=0.1.7" },
 ]
 
 [[package]]

@@ -13,6 +13,11 @@ _None_
 
 ### Added
 
+- Added managed dependency persistence for SQLite MCP launcher command (T-2026-06-08-117):
+  - Added `sqlite-mcp-server` to `pyproject.toml` and refreshed `uv.lock`.
+  - Restored `venvtext2sql/bin/sqlite-mcp-server` availability via locked `uv sync` in the canonical environment.
+  - Fixes `run_mcp_server_sqlite.sh` failure when `MCP_SQLITE_SERVER_CMD=venvtext2sql/bin/sqlite-mcp-server` is configured.
+
 - Added README discoverability link for JetBrains venv setup checklist (T-2026-06-08-116):
   - Added a short Quick Setup note in `README.md` that links to `docs/JETBRAINS_VENV_CHECKLIST.md`.
   - Makes the checklist easier to find for new contributors during project onboarding.
