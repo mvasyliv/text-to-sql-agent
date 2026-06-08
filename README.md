@@ -8,6 +8,10 @@ Commit message: type(scope): short summary [T-YYYY-MM-DD-NNN].
 
 PR title: type: short summary [T-YYYY-MM-DD-NNN]; merge to main only via PR.
 
+## Quick Setup Note
+
+- If you use JetBrains IDEs, see `docs/JETBRAINS_VENV_CHECKLIST.md` for a minimal interpreter and terminal activation checklist for `venvtext2sql`.
+
 ## Query Graph (Current)
 
 ![Current query orchestration graph](docs/query_graph.png)

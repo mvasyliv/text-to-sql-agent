@@ -8,6 +8,34 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-08
+
+### T-2026-06-08-116 - Add README link to JetBrains venv checklist
+
+- Updated `README.md` with a short Quick Setup note that links to `docs/JETBRAINS_VENV_CHECKLIST.md`.
+- Goal: improve discoverability of the JetBrains environment setup checklist for new contributors.
+- Validation:
+  - Documentation-only change; no runtime code behavior modified.
+
+### T-2026-06-08-115 - Add JetBrains venv activation checklist for project open workflow
+
+- Added `docs/JETBRAINS_VENV_CHECKLIST.md` with a minimal 3-step checklist targeted to JetBrains IDEs.
+- Checklist covers interpreter selection, terminal auto-activation shell path, and quick runtime verification commands.
+- Goal: reduce repeated setup drift where `venvtext2sql` is not active after opening the project in JetBrains.
+- Validation:
+  - Documentation-only change; no runtime code behavior modified.
+
+### T-2026-06-08-114 - Configure persistent SQLite MCP server executable in dev environment
+
+- Installed `sqlite-mcp-server` into the canonical `venvtext2sql` environment using `uv pip`.
+- Added `MCP_SQLITE_SERVER_CMD=venvtext2sql/bin/sqlite-mcp-server` to `.env.dev`.
+- Verified `run_mcp_server_sqlite.sh` starts without requiring a manual `MCP_SQLITE_SERVER_CMD=...` prefix.
+- Confirmed `run_main_chainlit.sh` remains operational after the environment update.
+- Validation:
+  - Ran `./run_mcp_server_sqlite.sh` with `.env.dev` defaults.
+  - Checked active processes to confirm both SQLite MCP server and Chainlit runtime are running.
+
+
 ## 2026-06-05
 
 ### T-2026-06-05-113 - Add MCP server launch scripts for SQLite, PostgreSQL, and Athena

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-08
+
+### Planned
+
+_None_
+
+### Added
+
+- Added README discoverability link for JetBrains venv setup checklist (T-2026-06-08-116):
+  - Added a short Quick Setup note in `README.md` that links to `docs/JETBRAINS_VENV_CHECKLIST.md`.
+  - Makes the checklist easier to find for new contributors during project onboarding.
+
+- Added JetBrains venv activation checklist for project open workflow (T-2026-06-08-115):
+  - Added `docs/JETBRAINS_VENV_CHECKLIST.md` with a minimal 3-step setup and verification list.
+  - Covers interpreter selection (`venvtext2sql/bin/python`), terminal auto-activation shell path, and quick verification commands.
+
+- Added persistent SQLite MCP executable configuration for local development (T-2026-06-08-114):
+  - Installed `sqlite-mcp-server` in the canonical `venvtext2sql` environment.
+  - Added `MCP_SQLITE_SERVER_CMD=venvtext2sql/bin/sqlite-mcp-server` to `.env.dev`.
+  - Enabled `run_mcp_server_sqlite.sh` startup without manual environment-variable prefixing.
+
+
 ## 2026-06-05
 
 ### Planned
