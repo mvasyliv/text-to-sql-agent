@@ -10,6 +10,21 @@ Rules:
 
 ## 2026-06-08
 
+### T-2026-06-08-120 - Implement Streamlit UI flow and launcher integration
+
+- Implemented `src/text_to_sql_agent/ui/streamlit_app.py` with a Streamlit chat flow reusing existing UI orchestration helpers (`build_ui_runtime`, `start_query_turn`, `resume_query_turn`, `build_export_files`).
+- Added SQL approval controls (`Approve`, `Reject`, `Edit`) and resumed-graph handling for pending SQL decisions.
+- Added Streamlit rendering for query results (row count, markdown table, insight text) and optional chart display from existing chart spec rendering.
+- Added history sidebar integration through `ConversationHistoryService` so users can open recent conversations persisted in the session repository.
+- Added launcher entrypoint `main_streamlit.py` and shell runner `run_main_streamlit.sh` (with free-port selection and canonical `venvtext2sql` execution path fallback behavior).
+- Added focused helper tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py`.
+- Added managed dependency `streamlit` to `pyproject.toml` and `uv.lock`, then synced `venvtext2sql`.
+- Updated `README.md` and `docs/ARCHITECTURE.md` to document the new Streamlit runtime path.
+- Validation:
+  - `venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_streamlit_app.py -q`
+  - `venvtext2sql/bin/python -m ruff check src/text_to_sql_agent/ui/streamlit_app.py main_streamlit.py tests/text_to_sql_agent/ui/test_streamlit_app.py`
+  - `timeout 5s /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_main_streamlit.sh`
+
 ### T-2026-06-08-119 - Unify PostgreSQL and Athena MCP launcher behavior with SQLite
 
 - Updated `run_mcp_server_postgresql.sh` and `run_mcp_server_athena.sh` to mirror SQLite launcher shutdown behavior:

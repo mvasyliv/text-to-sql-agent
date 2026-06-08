@@ -3,7 +3,7 @@
 This document is the living reference for the architecture of the text-to-SQL agent.
 
 Current repository status:
-- Core request orchestration and Chainlit UI flow are implemented.
+- Core request orchestration and web UI flows (Chainlit and Streamlit) are implemented.
 - User authentication and persistent conversation history are implemented over the conversation SQLite database.
 - This document describes the current architecture and the intended boundaries for future changes.
 
@@ -57,8 +57,10 @@ Its responsibilities are:
 
 Current runtime entrypoints:
 - `main_chainlit.py` launches Chainlit web runtime.
+- `main_streamlit.py` launches Streamlit web runtime.
 - `main_terminal.py` provides terminal-mode interaction and schema shortcuts.
 - `src/text_to_sql_agent/ui/chainlit_app.py` contains Chainlit callback wiring.
+- `src/text_to_sql_agent/ui/streamlit_app.py` contains Streamlit interaction wiring.
 
 ### Agents Layer
 

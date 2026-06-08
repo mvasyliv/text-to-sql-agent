@@ -13,6 +13,12 @@ _None_
 
 ### Added
 
+- Added Streamlit UI runtime and launcher integration (T-2026-06-08-120):
+  - Implemented `src/text_to_sql_agent/ui/streamlit_app.py` with SQL preview approval controls, result rendering, export actions, and conversation history loading.
+  - Added `main_streamlit.py` and `run_main_streamlit.sh` to launch Streamlit with environment loading and free localhost port selection.
+  - Added focused Streamlit helper tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py`.
+  - Added managed `streamlit` dependency in `pyproject.toml` and `uv.lock`, and documented the launcher in `README.md` plus architecture reference updates in `docs/ARCHITECTURE.md`.
+
 - Unified PostgreSQL and Athena launcher shutdown behavior with SQLite (T-2026-06-08-119):
   - Updated `run_mcp_server_postgresql.sh` and `run_mcp_server_athena.sh` to use child-process signal mediation (`INT`/`TERM` trap + forwarded `SIGTERM`) and normalized interrupt exits.
   - Made PostgreSQL/Athena preflight checks non-blocking so launchers continue startup with warnings instead of failing early.
