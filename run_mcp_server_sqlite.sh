@@ -28,7 +28,28 @@ if ! command -v "$SERVER_CMD" >/dev/null 2>&1; then
 	exit 1
 fi
 
-exec "$SERVER_CMD" \
+# Convert terminal interrupts into TERM for cleaner AnyIO/FastMCP shutdown.
+_server_pid=""
+_shutdown() {
+	if [[ -n "${_server_pid}" ]] && kill -0 "${_server_pid}" >/dev/null 2>&1; then
+		kill -TERM "${_server_pid}" >/dev/null 2>&1 || true
+	fi
+}
+trap _shutdown INT TERM
+
+"$SERVER_CMD" \
 	--transport "${MCP_SQLITE_TRANSPORT:-stdio}" \
 	--db "$SQLITE_PATH" \
-	"$@"
+	"$@" &
+_server_pid=$!
+
+set +e
+wait "${_server_pid}"
+_exit_code=$?
+set -e
+
+trap - INT TERM
+if [[ "${_exit_code}" -eq 130 || "${_exit_code}" -eq 143 ]]; then
+	exit 0
+fi
+exit "${_exit_code}"

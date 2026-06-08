@@ -10,6 +10,34 @@ Rules:
 
 ## 2026-06-08
 
+### T-2026-06-08-119 - Unify PostgreSQL and Athena MCP launcher behavior with SQLite
+
+- Updated `run_mcp_server_postgresql.sh` and `run_mcp_server_athena.sh` to mirror SQLite launcher shutdown behavior:
+  - run server as child process,
+  - trap `INT`/`TERM`,
+  - forward `SIGTERM` to child,
+  - normalize interrupt-related exits (`130`, `143`) to `0`.
+- Made PostgreSQL and Athena preflight checks non-blocking (warnings only) so launcher startup is not aborted before the MCP process starts.
+- Added managed dependency `postgresql-mcp-server` to `pyproject.toml` and `uv.lock`, then synced `venvtext2sql`.
+- Added PostgreSQL launcher compatibility mapping from existing `PG_*` environment variables into required `POSTGRES_*` keys expected by the installed server implementation.
+- Validation:
+  - `bash -n /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_sqlite.sh`
+  - `bash -n /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_postgresql.sh`
+  - `bash -n /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_athena.sh`
+  - `test -x /home/mykola/prj_p/text-to-sql-agent/venvtext2sql/bin/postgresql-mcp-server`
+  - `timeout 2s /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_postgresql.sh`
+  - `env MCP_POSTGRESQL_SERVER_CMD=/tmp/mcp_sleep_stub.sh /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_postgresql.sh` then `SIGINT` -> clean `0` exit
+  - `env MCP_ATHENA_SERVER_CMD=/tmp/mcp_sleep_stub.sh /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_athena.sh` then `SIGINT` -> clean `0` exit
+
+### T-2026-06-08-118 - Gracefully stop SQLite MCP launcher on terminal interrupt
+
+- Investigated shutdown traceback reproduced when stopping `run_mcp_server_sqlite.sh` with `Ctrl+C` (`KeyboardInterrupt` surfaced from AnyIO/FastMCP).
+- Updated `run_mcp_server_sqlite.sh` to run the server as a child process, trap `INT`/`TERM`, and forward `SIGTERM` to the MCP child for cleaner shutdown behavior.
+- Preserved launcher preflight checks and stdio transport defaults; only signal/shutdown handling was changed.
+- Validation:
+  - `bash -n /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_sqlite.sh`
+  - `timeout -s INT 2s /usr/bin/env bash /home/mykola/prj_p/text-to-sql-agent/run_mcp_server_sqlite.sh` (exits cleanly without traceback output)
+
 ### T-2026-06-08-117 - Persist sqlite MCP server executable via managed dependency
 
 - Diagnosed launcher failure: `run_mcp_server_sqlite.sh` resolved `MCP_SQLITE_SERVER_CMD=venvtext2sql/bin/sqlite-mcp-server`, but the executable was missing from `venvtext2sql`.
@@ -367,7 +395,7 @@ Rules:
 - Removed temporary backup file `tests/text_to_sql_agent/db/conversation.db.bak_from_target_before_move` after successful move confirmation.
 - Verification:
   - Confirmed `conversation.db` is no longer present in repository root.
-  - Confirmed `tests/text_to_sql_agent/db/conversation.db` exists.
+  - Confirmed `tests/text_to_sql-agent/db/conversation.db` exists.
   - Confirmed all env files contain the same `CONVERSATION_DB_PATH` value.
 
 ### T-2026-05-29-084 - Set up Chainlit JWT secret configuration

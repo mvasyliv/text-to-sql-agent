@@ -2708,6 +2708,19 @@ wheels = [
 ]
 
 [[package]]
+name = "postgresql-mcp-server"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+    { name = "psycopg", extra = ["binary"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/53/0e3198c81d37149da7c0e3f5b16f1d7f70457b1e325a21e2987959ee0cf8/postgresql_mcp_server-1.1.0.tar.gz", hash = "sha256:6332eb69acbe0be3db3302b2b12368d2ba38a13a7a55b0c977b93904203b5c31", size = 18735, upload-time = "2026-06-04T09:10:04.265Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/5f/488ee49986d5cb265722817ed7753ff02c3d57a62775551f23bcf861f851/postgresql_mcp_server-1.1.0-py3-none-any.whl", hash = "sha256:9e6d192ea9abe1cbebce0e199989e4121fa3d60bc2a99d881a067f9fc2d83056", size = 16302, upload-time = "2026-06-04T09:10:02.199Z" },
+]
+
+[[package]]
 name = "propcache"
 version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3598,6 +3611,7 @@ dependencies = [
     { name = "mypy" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "postgresql-mcp-server" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
@@ -3620,6 +3634,7 @@ requires-dist = [
     { name = "mypy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=3.0.2" },
     { name = "plotly", specifier = ">=6.7.0" },
+    { name = "postgresql-mcp-server", specifier = ">=1.1.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "psycopg2-binary", specifier = ">=2.9.12" },
     { name = "pydantic", specifier = ">=2.13.4" },

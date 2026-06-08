@@ -13,6 +13,16 @@ _None_
 
 ### Added
 
+- Unified PostgreSQL and Athena launcher shutdown behavior with SQLite (T-2026-06-08-119):
+  - Updated `run_mcp_server_postgresql.sh` and `run_mcp_server_athena.sh` to use child-process signal mediation (`INT`/`TERM` trap + forwarded `SIGTERM`) and normalized interrupt exits.
+  - Made PostgreSQL/Athena preflight checks non-blocking so launchers continue startup with warnings instead of failing early.
+  - Added `postgresql-mcp-server` to managed dependencies (`pyproject.toml`, `uv.lock`) and mapped `PG_*` variables to required `POSTGRES_*` keys in the PostgreSQL launcher for runtime compatibility.
+
+- Added graceful interrupt handling for SQLite MCP launcher shutdown (T-2026-06-08-118):
+  - Updated `run_mcp_server_sqlite.sh` to trap terminal `INT`/`TERM` and forward `SIGTERM` to the MCP child process.
+  - Prevents noisy AnyIO/FastMCP `KeyboardInterrupt` traceback during manual stop with `Ctrl+C`.
+  - Keeps existing preflight checks and stdio transport behavior unchanged.
+
 - Added managed dependency persistence for SQLite MCP launcher command (T-2026-06-08-117):
   - Added `sqlite-mcp-server` to `pyproject.toml` and refreshed `uv.lock`.
   - Restored `venvtext2sql/bin/sqlite-mcp-server` availability via locked `uv sync` in the canonical environment.
