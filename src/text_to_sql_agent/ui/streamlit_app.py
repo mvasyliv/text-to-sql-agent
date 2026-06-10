@@ -93,6 +93,55 @@ def _set_active_conversation(conversation_id: str) -> None:
     st.session_state["chat_messages"] = []
 
 
+def _normalize_user_profile(user_id: str, display_name: str) -> tuple[str, str]:
+    normalized_user_id = user_id.strip() or "streamlit-user"
+    normalized_display_name = display_name.strip() or normalized_user_id
+    return normalized_user_id, normalized_display_name
+
+
+def _build_session_identity_diagnostics(
+    conversation_id: str,
+    pending_thread_id: str | None,
+) -> str:
+    normalized_pending_thread_id = (pending_thread_id or "").strip() or "none"
+    return (
+        "Session identity\n\n"
+        f"- conversation_id: `{conversation_id}`\n"
+        f"- pending_thread_id: `{normalized_pending_thread_id}`"
+    )
+
+
+def _render_user_sidebar() -> None:
+    st.sidebar.subheader("User")
+    user_id_input = st.sidebar.text_input(
+        "User ID",
+        value=str(st.session_state["user_id"]),
+        help="Conversation history is scoped by user ID.",
+    )
+    display_name_input = st.sidebar.text_input(
+        "Display Name",
+        value=str(st.session_state["display_name"]),
+    )
+
+    if st.sidebar.button("Apply User", use_container_width=True):
+        normalized_user_id, normalized_display_name = _normalize_user_profile(
+            user_id_input,
+            display_name_input,
+        )
+        if normalized_user_id != st.session_state["user_id"]:
+            _set_active_conversation(f"conv-{uuid4().hex}")
+        st.session_state["user_id"] = normalized_user_id
+        st.session_state["display_name"] = normalized_display_name
+        st.rerun()
+
+    st.sidebar.caption(
+        _build_session_identity_diagnostics(
+            conversation_id=str(st.session_state["conversation_id"]),
+            pending_thread_id=st.session_state.get("pending_thread_id"),
+        )
+    )
+
+
 def _ensure_streamlit_session_defaults() -> None:
     st.session_state.setdefault("user_id", os.getenv("STREAMLIT_USER_ID", "streamlit-user"))
     st.session_state.setdefault("display_name", os.getenv("STREAMLIT_DISPLAY_NAME", "Streamlit User"))
@@ -215,7 +264,7 @@ def _render_pending_sql_controls(runtime: UiRuntime) -> None:
     if st.session_state.get("awaiting_edit_sql"):
         edited_sql = st.text_area("Edited SQL", value=sql_preview, height=180)
         if st.button("Submit Edited SQL", use_container_width=True):
-            _resume_with_decision(runtime, {"edit": edited_sql})
+            _resume_with_decision(runtime, {"edit": str(edited_sql)})
             st.rerun()
 
 
@@ -251,7 +300,12 @@ def main() -> None:
 
     _ensure_streamlit_session_defaults()
     runtime = _get_runtime()
+    _render_user_sidebar()
     _render_history_sidebar(runtime)
+
+    st.caption(
+        f"Conversation user: **{st.session_state['display_name']}** (`{st.session_state['user_id']}`)"
+    )
 
     for message in st.session_state["chat_messages"]:
         with st.chat_message(message["role"]):

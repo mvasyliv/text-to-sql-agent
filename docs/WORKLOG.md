@@ -8,6 +8,26 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-10
+
+### T-2026-06-10-122 - Add Streamlit session identity diagnostics and README identity vars note
+
+- Updated `src/text_to_sql_agent/ui/streamlit_app.py` with `_build_session_identity_diagnostics(...)` and a read-only sidebar diagnostics block that shows `conversation_id` and `pending_thread_id`.
+- Kept diagnostics deterministic by normalizing empty `pending_thread_id` to `none`.
+- Updated `README.md` in the `UI Launchers` section with a short note about Streamlit identity defaults from `STREAMLIT_USER_ID` and `STREAMLIT_DISPLAY_NAME`.
+- Added focused tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py` for diagnostics rendering.
+- Validation:
+  - `venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_streamlit_app.py -q`
+
+### T-2026-06-10-121 - Add Streamlit conversation user profile visibility
+
+- Updated `src/text_to_sql_agent/ui/streamlit_app.py` to add a `User` sidebar section with editable `User ID` and `Display Name`, plus an `Apply User` action that resets active conversation state when user identity changes.
+- Added `_normalize_user_profile(...)` helper in Streamlit UI for deterministic user profile fallback handling.
+- Added a visible caption in the Streamlit main view showing the active conversation identity (`display_name` + `user_id`).
+- Added focused tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py` for user profile normalization.
+- Validation:
+  - `venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_streamlit_app.py -q`
+
 ## 2026-06-08
 
 ### T-2026-06-08-120 - Implement Streamlit UI flow and launcher integration

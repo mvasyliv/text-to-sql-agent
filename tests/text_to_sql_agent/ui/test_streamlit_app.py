@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from text_to_sql_agent.ui.streamlit_app import (
+    _build_session_identity_diagnostics,
     _build_result_render_model,
     _build_sql_approval_markdown,
     _connection_config_from_env,
+    _normalize_user_profile,
 )
 
 
@@ -52,4 +54,24 @@ def test_build_sql_approval_markdown_includes_mode_and_sql() -> None:
     assert "Generation mode: **LLM**" in content
     assert "```sql" in content
     assert "SELECT * FROM users;" in content
+
+
+def test_normalize_user_profile_applies_safe_fallbacks() -> None:
+    assert _normalize_user_profile("", "") == ("streamlit-user", "streamlit-user")
+    assert _normalize_user_profile("u-42", "") == ("u-42", "u-42")
+    assert _normalize_user_profile(" u-42 ", " Alice ") == ("u-42", "Alice")
+
+
+def test_build_session_identity_diagnostics_handles_missing_thread_id() -> None:
+    content = _build_session_identity_diagnostics("conv-123", None)
+
+    assert "conversation_id: `conv-123`" in content
+    assert "pending_thread_id: `none`" in content
+
+
+def test_build_session_identity_diagnostics_shows_pending_thread_id() -> None:
+    content = _build_session_identity_diagnostics("conv-123", "thread-789")
+
+    assert "pending_thread_id: `thread-789`" in content
+
 

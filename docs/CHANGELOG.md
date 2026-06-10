@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-10
+
+### Planned
+
+_None_
+
+### Added
+
+- Added Streamlit session identity diagnostics and README identity-vars note (T-2026-06-10-122):
+  - Updated `src/text_to_sql_agent/ui/streamlit_app.py` with a read-only sidebar diagnostics block that shows `conversation_id` and `pending_thread_id`.
+  - Added deterministic diagnostics formatting with `none` fallback for missing pending thread IDs.
+  - Updated `README.md` with a short Streamlit note for `STREAMLIT_USER_ID` and `STREAMLIT_DISPLAY_NAME` environment variables.
+  - Added focused helper tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py`.
+
+- Added Streamlit conversation-user profile visibility (T-2026-06-10-121):
+  - Updated `src/text_to_sql_agent/ui/streamlit_app.py` with a sidebar `User` block (`User ID`, `Display Name`) and an `Apply User` action for switching conversation identity.
+  - Added a visible conversation-user caption in the Streamlit main view so operators can see who is currently driving the chat.
+  - Added focused tests in `tests/text_to_sql_agent/ui/test_streamlit_app.py`.
+
 ## 2026-06-08
 
 ### Planned

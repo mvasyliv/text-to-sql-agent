@@ -109,3 +109,5 @@ def test_start_query_turn_persists_explicit_thread_id():
     assert conversation is not None
     assert conversation.graph_thread_id == "thread-explicit"
 
+
+

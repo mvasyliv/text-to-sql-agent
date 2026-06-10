@@ -18,6 +18,9 @@ PR title: type: short summary [T-YYYY-MM-DD-NNN]; merge to main only via PR.
   - `./run_main_chainlit.sh`
 - Streamlit UI:
   - `./run_main_streamlit.sh`
+  - Optional identity defaults via env vars:
+    - `STREAMLIT_USER_ID`
+    - `STREAMLIT_DISPLAY_NAME`
 
 Both launchers load runtime environment values and pick a free localhost port when the corresponding `CHAINLIT_PORT` or `STREAMLIT_PORT` is not set.
 
