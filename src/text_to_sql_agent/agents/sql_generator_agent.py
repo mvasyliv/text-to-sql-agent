@@ -36,9 +36,15 @@ _MATCH_IGNORE_TOKENS = {
 }
 _SQL_FENCE_RE = re.compile(r"```(?:sql)?\s*(.*?)\s*```", re.IGNORECASE | re.DOTALL)
 _COUNTRY_CODE_RE = re.compile(r"\b[A-Z]{2}\b")
+_COUNTRY_LIST_RE = re.compile(
+    r"\bcountries?\b\s*[:=]?\s*([A-Za-z]{2}(?:(?:\s*,\s*|\s+)[A-Za-z]{2})+)",
+    re.IGNORECASE,
+)
+_COUNTRY_SINGLE_RE = re.compile(r"\bcountry\s+([A-Za-z]{2})\b", re.IGNORECASE)
 _NUMBER_RE = re.compile(r"\b\d+\b")
 _BLOCKED_SQL_TOKENS = ("insert", "update", "delete", "drop", "alter", "truncate")
 _LLM_UNAVAILABLE_STATUSES = {"disabled", "missing_api_key", "client_unavailable", "error"}
+_COUNTRY_CODE_STOPWORDS = {"IN", "OR", "BY", "TO", "ON", "AS", "AT", "OF"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +168,77 @@ def _extract_numbers(text: str) -> set[str]:
     return set(_NUMBER_RE.findall(text))
 
 
+def _extract_country_codes_ordered(text: str) -> list[str]:
+    """Extract requested country codes in the same order as user text."""
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    list_match = _COUNTRY_LIST_RE.search(text)
+    if list_match:
+        # Accept both comma-separated and whitespace-separated country code lists.
+        for raw_code in re.split(r"\s*,\s*|\s+", list_match.group(1).strip()):
+            if not raw_code:
+                continue
+            code = raw_code.strip().upper()
+            if len(code) == 2 and code.isalpha() and code not in seen:
+                seen.add(code)
+                ordered.append(code)
+        if ordered:
+            return ordered
+
+    single_match = _COUNTRY_SINGLE_RE.search(text)
+    if single_match:
+        code = single_match.group(1).upper()
+        if code not in seen:
+            seen.add(code)
+            ordered.append(code)
+        return ordered
+
+    for code in _COUNTRY_CODE_RE.findall(text.upper()):
+        if code in _COUNTRY_CODE_STOPWORDS or code in seen:
+            continue
+        seen.add(code)
+        ordered.append(code)
+    return ordered
+
+
+def _build_country_filter(
+    *,
+    table_columns: list[str],
+    country_codes: list[str],
+) -> str | None:
+    if not country_codes:
+        return None
+
+    has_countrycode = "countrycode" in table_columns
+    has_countrycodegeo = "countrycodegeo" in table_columns
+    if not has_countrycode and not has_countrycodegeo:
+        return None
+
+    if len(country_codes) == 1:
+        value = f"'{country_codes[0]}'"
+        clauses: list[str] = []
+        if has_countrycode:
+            clauses.append(f"countrycode = {value}")
+        if has_countrycodegeo:
+            clauses.append(f"countrycodegeo = {value}")
+        return "(" + " OR ".join(clauses) + ")"
+
+    in_values = ", ".join(f"'{code}'" for code in country_codes)
+    clauses = []
+    if has_countrycode:
+        clauses.append(f"countrycode IN ({in_values})")
+    if has_countrycodegeo:
+        clauses.append(f"countrycodegeo IN ({in_values})")
+    return "(" + " OR ".join(clauses) + ")"
+
+
+def _choose_projection(tokens: list[str], table_columns: list[str]) -> str:
+    if "userid" in tokens and "userid" in table_columns:
+        return "userid"
+    return "*"
+
+
 def _normalize_text_for_match(text: str) -> str:
     return " ".join(_tokenize(text))
 
@@ -188,9 +265,12 @@ def _few_shot_match_score(user_question: str, example_input: str) -> float:
         if question_countries == example_countries:
             score += 0.9
         elif question_countries & example_countries:
-            score += 0.35
+            # Partial country match (e.g., user asks for US+PL but example has UA+US).
+            # Do not reward this; few-shot should only be used for exact country matches.
+            score -= 0.5
         else:
-            score -= 0.4
+            # No country overlap: strong penalty
+            score -= 0.8
 
     question_numbers = _extract_numbers(user_question)
     example_numbers = _extract_numbers(example_input)
@@ -297,19 +377,30 @@ def _generate_deterministic_sql(
         )
 
     quoted_table = _quote_identifier(table, dialect)
+    table_columns = schema_map.get(table, [])
+    country_codes = _extract_country_codes_ordered(user_question)
+    country_filter = _build_country_filter(table_columns=table_columns, country_codes=country_codes)
+
     if intent == "count":
+        where_clause = f" WHERE {country_filter}" if country_filter else ""
         return (
-            f"SELECT COUNT(*) AS row_count FROM {quoted_table}",
-            f"Detected counting intent; counting rows in table '{table}'.",
+            f"SELECT COUNT(*) AS row_count FROM {quoted_table}{where_clause}",
+            (
+                f"Detected counting intent; counting rows in table '{table}'"
+                + (" with requested country filter." if country_filter else ".")
+            ),
             table,
             intent,
         )
 
+    projection = _choose_projection(tokens, table_columns)
+    where_clause = f" WHERE {country_filter}" if country_filter else ""
     return (
-        f"SELECT * FROM {quoted_table} LIMIT {max_limit}",
+        f"SELECT {projection} FROM {quoted_table}{where_clause} LIMIT {max_limit}",
         (
-            f"Detected listing intent; selecting rows from table '{table}' "
-            f"with LIMIT {max_limit} for safe preview."
+            f"Detected listing intent; selecting {projection} from table '{table}'"
+            + (" with requested country filter" if country_filter else "")
+            + f" with LIMIT {max_limit} for safe preview."
         ),
         table,
         intent,

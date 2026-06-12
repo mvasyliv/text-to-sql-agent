@@ -8,6 +8,46 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-12
+
+### T-2026-06-12-126 - Support no-comma country list parsing in deterministic SQL fallback
+
+- Extended country-list extraction in `src/text_to_sql_agent/agents/sql_generator_agent.py` to support multi-country formats without commas, including `countries GB PL` and `countries: GB PL`.
+- Updated regex/splitting logic to accept both comma-separated and whitespace-separated country codes while preserving code order.
+- Added regression test `test_country_filter_without_comma_is_preserved_in_deterministic_fallback()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+- Validation:
+  - `source venvtext2sql/bin/activate && python -m pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q`
+
+### T-2026-06-12-125 - Add deterministic country filter fallback for activities userid requests
+
+- Reproduced the regression where query "get list userid from activities for countries GB, PL" fell through to deterministic SQL without a WHERE clause.
+- Extended deterministic generator logic in `src/text_to_sql_agent/agents/sql_generator_agent.py` to parse country codes from user text and build country-aware predicates for `countrycode`/`countrycodegeo`.
+- Added projection selection for `userid` when it is explicitly requested and the selected table contains that column.
+- Kept behavior read-only and conservative: only applies country filters when matching columns exist in schema context.
+- Added regression test `test_country_filter_is_preserved_in_deterministic_fallback()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+- Validation:
+  - `source venvtext2sql/bin/activate && python -m pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q`
+
+### T-2026-06-12-124 - Fix few-shot SQL scoring to reject partial country code matches
+
+- Identified root cause: few-shot selection logic was rewarding partial country code matches (+0.35) instead of penalizing them.
+- When user requested "US, PL, GB" but an example had "UA, US", the system found a match and used the wrong SQL.
+- Updated `_few_shot_match_score()` in `src/text_to_sql_agent/agents/sql_generator_agent.py`:
+  - Changed partial country match penalty from +0.35 to -0.5 (strong discouragement).
+  - Increased full country mismatch penalty from -0.4 to -0.8.
+  - Fixed bug: `example_numbers` was using wrong variable (`user_question` instead of `example_input`).
+- Result: few-shot SQL with mismatched countries will no longer be selected (score falls below 0.8 threshold).
+- Added test `test_mismatched_country_codes_does_not_use_partial_few_shot()` to verify fallback to deterministic SQL.
+- All 14 SQL generator tests pass; no regressions.
+
+### T-2026-06-12-123 - Add few-shot example for userid query with multiple countries
+
+- Added missing few-shot example to `src/text_to_sql_agent/prompts/few_shot_examples.py` for the pattern "Get userid from activities for countries" with IN clause.
+- The new example shows how to select userid for multiple countries (UA, US) using both `countrycode IN (...)` and `countrycodegeo IN (...)`.
+- This fills a gap in the existing examples where selecting userid from multiple countries was not demonstrated, causing the LLM to generate incorrect single-country queries.
+- Validation: Syntax check passed; no regressions in existing examples.
+
+
 ## 2026-06-10
 
 ### T-2026-06-10-122 - Add Streamlit session identity diagnostics and README identity vars note

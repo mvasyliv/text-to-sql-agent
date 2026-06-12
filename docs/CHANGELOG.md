@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-12
+
+### Planned
+
+_None_
+
+### Added
+
+- Added no-comma country list parsing support in deterministic SQL fallback (T-2026-06-12-126):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to parse country lists from formats like `countries GB PL` and `countries: GB PL`.
+  - Keeps country-aware `WHERE` generation and `userid` projection alignment when LLM/few-shot is unavailable.
+  - Added regression test `test_country_filter_without_comma_is_preserved_in_deterministic_fallback()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
+- Added deterministic country-filter fallback for activities userid requests (T-2026-06-12-125):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` so deterministic generation preserves requested country filters when schema includes `countrycode` / `countrycodegeo`.
+  - Added deterministic projection selection for `userid` to keep intent alignment for prompts like "get list userid ...".
+  - Added regression test `test_country_filter_is_preserved_in_deterministic_fallback()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
+- Fixed few-shot SQL scoring to reject partial country code matches (T-2026-06-12-124):
+  - Updated `_few_shot_match_score()` in `src/text_to_sql_agent/agents/sql_generator_agent.py` with stricter country code matching.
+  - Partial country matches now incur -0.5 penalty (instead of +0.35 bonus), preventing SQL generation with wrong countries.
+  - Full country mismatches now incur -0.8 penalty (instead of -0.4).
+  - Fixed bug where `example_numbers` was reading the wrong variable.
+  - Added regression test: `test_mismatched_country_codes_does_not_use_partial_few_shot()`.
+
+- Added few-shot example for userid query with multiple countries (T-2026-06-12-123):
+  - Updated `src/text_to_sql_agent/prompts/few_shot_examples.py` with a new example showing "Get userid from activities for countries UA, US" using IN clause.
+  - Fixes SQL generation for queries that select userid from multiple countries, which was previously missing from the training examples.
+
 ## 2026-06-10
 
 ### Planned

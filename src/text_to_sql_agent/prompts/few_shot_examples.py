@@ -46,6 +46,13 @@ SQLITE_FEW_SHOT_EXAMPLES: tuple[FewShotExample, ...] = (
         ),
     ),
     _sqlite_activity_example(
+        input="Get userid from activities for countries UA, US",
+        query=(
+            "SELECT userid FROM activities_eventdate "
+            "WHERE (countrycode IN ('UA', 'US') OR countrycodegeo IN ('UA', 'US'));"
+        ),
+    ),
+    _sqlite_activity_example(
         input="Get activities for verticals 1,2,3,4,5",
         query="SELECT * FROM activities_eventdate WHERE verticalid IN (1,2,3,4,5);",
     ),
