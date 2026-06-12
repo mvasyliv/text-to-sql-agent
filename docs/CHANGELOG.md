@@ -13,6 +13,15 @@ _None_
 
 ### Added
 
+- Added README onboarding link to the shared agent selection cheat sheet (T-2026-06-12-128):
+  - Updated `README.md` `Quick Setup Note` with a direct link to `docs/AGENTS.md#one-page-agent-selection-cheat-sheet`.
+  - Improves onboarding discoverability so new contributors can quickly choose the right agent workflow.
+
+- Added shared one-page agent selection cheat sheet (T-2026-06-12-127):
+  - Updated `docs/AGENTS.md` with a practical team-facing guide for choosing the right agent by task outcome.
+  - Added a fast decision rule, agent-to-outcome table, minimal prompt templates, and a recommended default handoff flow.
+  - Improves discoverability and consistency of agent usage across planning, implementation, testing, and documentation work.
+
 - Added no-comma country list parsing support in deterministic SQL fallback (T-2026-06-12-126):
   - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to parse country lists from formats like `countries GB PL` and `countries: GB PL`.
   - Keeps country-aware `WHERE` generation and `userid` projection alignment when LLM/few-shot is unavailable.

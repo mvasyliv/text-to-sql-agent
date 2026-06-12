@@ -214,3 +214,62 @@ Alternatively, if your VS Code version supports agent selection:
 - Agent instructions are stored as `.*.instructions.md` files in the project root
 - Agents inherit base rules from `.github/copilot-instructions.md`
 - Functional-style PRs should use `docs/FUNCTIONAL_STYLE_REVIEW_CHECKLIST.md` as the review standard and `docs/AGENTS.md` as the entry point for finding it.
+
+---
+
+## One-Page Agent Selection Cheat Sheet
+
+Use this section as the default quick reference before starting any task.
+
+### Fast Decision Rule
+
+1. If you need code changes, bug fixes, or refactoring, start with **Developer**.
+2. If you need architecture/design choices first, start with **Architect**.
+3. If you need task breakdown and sequencing, start with **Task Manager**.
+4. If you need validation and regression confidence, use **Tester** after implementation.
+5. If you need docs, release notes, or technical explanations, use **Documentarian**.
+
+### Agent-by-Outcome Table
+
+| If your goal is... | Start with this agent | Typical output | Handoff next |
+| --- | --- | --- | --- |
+| Define solution shape, boundaries, trade-offs | Architect | Design proposal, risks, integration points | Task Manager or Developer |
+| Create execution plan and acceptance criteria | Task Manager | Task list in `docs/TASKS.md`, priorities, dependencies | Developer |
+| Implement feature or fix | Developer | Code changes with tests-ready structure | Tester |
+| Verify correctness and prevent regressions | Tester | Test cases, validation results, quality gaps | Developer (if fixes needed) |
+| Update docs and project trace | Documentarian | `docs/WORKLOG.md`, `docs/CHANGELOG.md`, guides | Done |
+
+### Minimal Prompt Templates
+
+#### Developer
+```
+@developer: Implement <feature/fix> in <files or module>. Keep public interfaces stable and add/update focused tests.
+```
+
+#### Architect
+```
+@architect: Design <feature/change> with trade-offs, integration points, and a concise implementation roadmap.
+```
+
+#### Task Manager
+```
+@task-manager: Break down <initiative> into tasks with acceptance criteria, dependencies, and effort estimates.
+```
+
+#### Tester
+```
+@tester: Add/execute tests for <feature/fix>, cover edge cases, and report residual risks.
+```
+
+#### Documentarian
+```
+@documentarian: Update docs for <change>, including TASKS/WORKLOG/CHANGELOG and any affected user/developer guides.
+```
+
+### Recommended Flow For Most Code Tasks
+
+1. Developer implements the change.
+2. Tester validates behavior and regression safety.
+3. Documentarian updates project trace documents.
+
+Use Architect and Task Manager upfront when the task has unclear scope, cross-module impact, or design risk.

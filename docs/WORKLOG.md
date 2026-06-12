@@ -10,6 +10,21 @@ Rules:
 
 ## 2026-06-12
 
+### T-2026-06-12-128 - Add README onboarding link to agent selection cheat sheet
+
+- Updated `README.md` in `Quick Setup Note` with a direct onboarding link to `docs/AGENTS.md#one-page-agent-selection-cheat-sheet`.
+- Goal: make agent-role guidance discoverable for new contributors directly from the main project entry document.
+- Validation:
+  - Documentation-only change; no runtime behavior modified.
+
+### T-2026-06-12-127 - Add shared one-page agent selection cheat sheet
+
+- Updated `docs/AGENTS.md` with a new one-page, team-facing cheat sheet for selecting the right agent.
+- Added practical sections: fast decision rule, agent-by-outcome mapping table, minimal prompt templates, and default handoff flow.
+- Goal: make day-to-day agent selection consistent and discoverable from the central agents guide.
+- Validation:
+  - Documentation-only change; no runtime behavior modified.
+
 ### T-2026-06-12-126 - Support no-comma country list parsing in deterministic SQL fallback
 
 - Extended country-list extraction in `src/text_to_sql_agent/agents/sql_generator_agent.py` to support multi-country formats without commas, including `countries GB PL` and `countries: GB PL`.

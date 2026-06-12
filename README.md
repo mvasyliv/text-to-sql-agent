@@ -11,6 +11,7 @@ PR title: type: short summary [T-YYYY-MM-DD-NNN]; merge to main only via PR.
 ## Quick Setup Note
 
 - If you use JetBrains IDEs, see `docs/JETBRAINS_VENV_CHECKLIST.md` for a minimal interpreter and terminal activation checklist for `venvtext2sql`.
+- If you are new to project agent roles, start with `docs/AGENTS.md#one-page-agent-selection-cheat-sheet` for a one-page selection guide.
 
 ## UI Launchers
 
