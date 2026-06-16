@@ -45,8 +45,8 @@ from .override_policy import (
     get_default_user_override_policy,
     validate_user_override_request,
 )
+from .few_shot_models import FewShotExample
 from .few_shot_examples import (
-    FewShotExample,
     SQLITE_FEW_SHOT_EXAMPLES,
     format_few_shot_examples,
     get_few_shot_examples,

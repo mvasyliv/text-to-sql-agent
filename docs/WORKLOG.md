@@ -8,6 +8,26 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-16
+
+### T-2026-06-16-129 - Refactor activities_eventdate few-shot examples into dedicated module
+
+- Created `src/text_to_sql_agent/prompts/few_shot_models.py` to hold the `FewShotExample` dataclass; this broke a circular import.
+  - Refactored `FewShotExample` from `@dataclass` to Pydantic `BaseModel` for consistency with rest of codebase.
+  - Used `model_config = ConfigDict(frozen=True)` for immutability equivalent to `@dataclass(frozen=True)`.
+  - Used `Field(default_factory=tuple)` for tuple default value.
+- Created `src/text_to_sql_agent/prompts/few_shot_examples_activities_eventdate.py` and migrated all 22 activities_eventdate few-shot examples (lines 19–156 from `few_shot_examples.py`).
+  - Removed helper function `_sqlite_activity_example()` since Pydantic constructor is cleaner.
+- Updated `src/text_to_sql_agent/prompts/few_shot_examples.py` to import examples from the new module and removed inline example definitions.
+- Updated `src/text_to_sql_agent/prompts/__init__.py` to import `FewShotExample` from `few_shot_models` instead of `few_shot_examples`.
+- Validation:
+  - All imports resolved without circular-dependency errors.
+  - Verified 22 examples load correctly via `get_few_shot_examples_for_tables("sqlite", ["activities_eventdate"])`.
+  - Verified formatting output: 3281 chars for all 22 examples.
+  - Verified immutability: `FewShotExample` instances are frozen (raises `ValidationError` on mutation attempt).
+  - No linting or type errors.
+- Outcome: few-shot examples are now modular, table-specific, and use Pydantic (aligned with project schema patterns).
+
 ## 2026-06-12
 
 ### T-2026-06-12-128 - Add README onboarding link to agent selection cheat sheet
