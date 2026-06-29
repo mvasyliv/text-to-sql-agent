@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-29
+
+### Planned
+
+_None_
+
+### Added
+
+- Added description metadata fields to canonical schema models (T-2026-06-29-139):
+  - Updated `src/text_to_sql_agent/models/schema.py` with optional `description` on `ColumnSchema` and `TableSchema`.
+  - Mapped introspection table comments to `TableSchema.description` in `src/text_to_sql_agent/services/schema_normalization.py`.
+  - Standardized Pydantic `Field(description=...)` metadata across canonical schema models.
+  - Extended schema model and normalization tests for description handling.
+
+- Added SQLite few-shot example for activities country UA query (T-2026-06-29-138):
+  - Registered few-shot pair for `Get activities for country UA.` -> filtered query on `activities_eventdate`.
+  - Example is maintained in `src/text_to_sql_agent/prompts/few_shot_examples_activities_eventdate.py`.
+
+- Configured automatic `venvtext2sql` activation for local development (T-2026-06-29-137):
+  - Added `.envrc` with `UV_PROJECT_ENVIRONMENT=venvtext2sql` and shell activation hook for direnv.
+  - Added local VS Code workspace settings for canonical interpreter selection and terminal auto-activation.
+  - Recommended `ms-python.python` in `.vscode/extensions.json`.
+
+- Added Chainlit shell launcher script (T-2026-06-29-136):
+  - Added `run_main_chainlit.sh` to launch `main_chainlit.py` from repository root with canonical-environment fallbacks.
+  - Documented launcher usage in `README.md`.
+
 ## 2026-06-17
 
 ### Planned

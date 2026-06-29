@@ -8,6 +8,62 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-29
+
+### T-2026-06-29-139 - Add description metadata fields to canonical schema models
+
+- **Goal**: Store human-readable table and column descriptions in the canonical schema contract and expose them consistently in model metadata.
+- **Implementation**:
+  - Kept optional `description: str | None` on `ColumnSchema` and `TableSchema` in `src/text_to_sql_agent/models/schema.py`.
+  - Mapped introspection table comments to `TableSchema.description` in `schema_normalization.py` (`description=raw_table.comment`).
+  - Standardized explicit Pydantic `Field(description=...)` text across `ForeignKeySchema`, `ColumnSchema`, `TableSchema`, and `DatabaseSchema`.
+  - Preserved downstream rendering support in `schema_document_builder.py` for table/column descriptions.
+- **Validation**:
+  - `tests/text_to_sql_agent/models/test_schema.py` covers optional column/table description values.
+  - `tests/text_to_sql_agent/services/test_schema_normalization.py` verifies table comment mapping to `description`.
+- **Outcome**: Canonical schema models now carry business-readable description metadata suitable for prompt context and schema documentation flows.
+
+### T-2026-06-29-138 - Add SQLite few-shot example for activities country UA query
+
+- **Goal**: Provide a domain few-shot pattern for single-country activity lookups against `activities_eventdate`.
+- **Implementation**:
+  - Added example:
+    - input: `Get activities for country UA.`
+    - query: `SELECT * FROM activities_eventdate WHERE (countrycode = 'UA' OR countrycodegeo = 'UA');`
+  - Example is registered under SQLite activities few-shots and later consolidated in `few_shot_examples_activities_eventdate.py` (see also T-2026-06-16-129).
+- **Validation**:
+  - Covered by `tests/text_to_sql_agent/prompts/test_few_shot_examples.py` read-only and formatting checks.
+- **Outcome**: Country-filtered activities queries have a canonical few-shot reference for SQLite generation paths.
+
+### T-2026-06-29-137 - Configure automatic venvtext2sql activation for local development
+
+- **Goal**: Reduce environment drift by auto-selecting the canonical project virtual environment in shell and IDE workflows.
+- **Implementation**:
+  - Added `.envrc` to export `UV_PROJECT_ENVIRONMENT=venvtext2sql` and `source venvtext2sql/bin/activate` when entering the repository (direnv).
+  - Added local `.vscode/settings.json` with:
+    - `python.defaultInterpreterPath` -> `venvtext2sql/bin/python`
+    - `python.terminal.activateEnvironment: true`
+    - dedicated Linux terminal profile `bash (venvtext2sql)`
+  - Added `ms-python.python` recommendation in `.vscode/extensions.json`.
+- **Notes**:
+  - `.vscode/settings.json` remains local-only per repository IDE policy (`.gitignore`).
+  - Complements canonical-environment decision in `docs/DECISIONS.md` and setup guidance in `CONTRIBUTING.md`.
+- **Outcome**: Contributors can open a terminal or reload the workspace and consistently run against `venvtext2sql`.
+
+### T-2026-06-29-136 - Add Chainlit shell launcher script
+
+- **Goal**: Provide a one-command local entrypoint for the Chainlit UI without requiring manual interpreter selection.
+- **Implementation**:
+  - Added executable `run_main_chainlit.sh` at repository root.
+  - Script resolves project root, validates `main_chainlit.py`, prefers `venvtext2sql/bin/python`, and falls back to `uv run python` or `python3`.
+  - Linked launcher usage from `README.md`.
+- **Follow-up**:
+  - Port conflict handling and free-port auto-selection were added later in T-2026-05-26-061.
+  - LLM secret loading in launcher runtime was added in T-2026-05-26-065.
+- **Validation**:
+  - Manual smoke runs confirmed Chainlit startup via `./run_main_chainlit.sh`.
+- **Outcome**: Chainlit UI startup is standardized through a repository-local shell launcher.
+
 ## 2026-06-17
 
 ### T-2026-06-17-135 - Add LLM-only SQL generation strategy without fallback
