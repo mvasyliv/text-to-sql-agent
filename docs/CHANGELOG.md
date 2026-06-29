@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-06-17
+
+### Planned
+
+_None_
+
+### Added
+
+- Added LLM-only SQL generation strategy without fallback (T-2026-06-17-135):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to support `generation_strategy` values `auto` and `llm_only`.
+  - In `llm_only` mode, SQL generation now fails explicitly when LLM output is unavailable/unsafe instead of using few-shot/deterministic fallback.
+  - Updated SQL generator node to accept default strategy configuration and per-state override via `sql_generation_strategy`.
+  - Added regression tests for successful and failure paths in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
+- Added automatic DISTINCT handling for single-column projection queries (T-2026-06-17-134):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to auto-insert `DISTINCT` for simple single-column `SELECT` queries so list-style requests return unique values by default.
+  - Applied consistently across deterministic generation, few-shot projection rewriting, and LLM SQL output handling.
+  - Added safeguards to skip DISTINCT for `SELECT *`, grouped queries (`GROUP BY`), and aggregate expressions (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`).
+  - Added and updated regression tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
+- Added additional shorthand projection aliases for SQL generation (T-2026-06-17-133):
+  - Extended field mapping in `src/text_to_sql_agent/agents/sql_generator_agent.py` to support shorthand requests such as `geo`, `uid`, `vid`, `date`, `entered`, and `timestamp`.
+  - Added focused regression tests to verify both alias extraction and few-shot projection rewrite behavior when templates return `SELECT *`.
+  - Improves UX for users who do not know exact column names in schema.
+
+- Added projection mapping for partial/non-exact field names in SQL generation (T-2026-06-17-132):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to resolve user tokens such as `country`, `user`, and typo-tolerant inputs to matching schema columns (`countrycode`, `userid`, etc.).
+  - Added tolerant matching strategy: aliases, prefix/substring checks, and close-match fallback.
+  - Added support for typo separators (`frop`, `form`, `fro`) in projection parsing boundaries.
+
+- Added few-shot projection adaptation for `SELECT *` templates (T-2026-06-17-132):
+  - When few-shot matching returns `SELECT * ...`, the generator now rewrites only the projection to inferred user-requested columns while preserving the few-shot WHERE conditions.
+  - Prevents over-broad projections for prompts that request approximate field names.
+  - Added regression tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+
+- Added few-shot example for userid query with verticals in optins table (T-2026-06-17-130):
+  - Updated `src/text_to_sql_agent/prompts/few_shot_examples_optins.py` with a new example: "Get userid from optins for verticals 1,2,3,4,5" → `SELECT userid FROM optins WHERE verticalid IN (1,2,3,4,5)`.
+  - Fixes bug where agent was generating `SELECT *` instead of `SELECT userid` when users explicitly requested userid with vertical filters.
+  - Positioned **before** the generic "Get optins for verticals" example so LLM sees the userid variant first during few-shot matching.
+  - Added regression test `test_optins_userid_with_verticals_few_shot()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Mirrors the established pattern from `activities_eventdate` few-shot examples.
+
 ## 2026-06-12
 
 ### Planned
@@ -746,4 +788,19 @@ _None_
 - The canonical changelog location was moved from the repository root to `docs/CHANGELOG.md`.
 - Updated repository instructions to document `venvtext2sql` as the canonical virtual environment and `uv` as the package manager.
 - Updated VS Code Python configuration to always show the selected interpreter in the status bar, making the canonical `venvtext2sql` environment visible during development.
+
+
+## [Unreleased - 2026-06-17]
+
+### Added
+- **Deterministic column projection extraction** (`T-2026-06-17-131`): Implemented automatic column detection from natural language user questions via `_extract_projection_from_question()` function. Supports patterns like "get userid and countrycode", "get userid, countrycode, gender", and validates extracted columns against database schema. Enables dynamic column selection without requiring few-shot examples for every column combination, improving system scalability as table schemas grow.
+- **Few-shot examples for multi-column optins queries**: Added two reference examples to `few_shot_examples_optins.py` showing multi-column selections ("Get userid and countrycode from optins" and "Get userid, countrycode, gender from optins").
+
+### Changed
+- **`_choose_projection()` priority logic**: Updated to prioritize explicit column extraction from user questions (Tier 1) before token-based heuristics (Tier 2) and default SELECT * (Tier 3). Maintains backward compatibility while enabling deterministic behavior for explicit column requests.
+
+### Technical Notes
+- Deterministic parser uses regex pattern `r'(?:get|show|select)\s+([\w,\s\band\s\.]+?)(?:\s+from|$)'` for column extraction.
+- System now scales to arbitrary tables and column combinations without manual few-shot example maintenance.
+- All 72 existing tests pass; backward compatibility fully preserved.
 

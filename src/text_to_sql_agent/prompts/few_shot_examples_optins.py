@@ -13,6 +13,21 @@ SQLITE_OPTINS_EXAMPLES: tuple[FewShotExample, ...] = (
         tables=_SQLITE_OPTINS_TABLE,
     ),
     FewShotExample(
+            input="Get userid from optins for verticals 1,2,3,4,5",
+            query="SELECT userid FROM optins WHERE verticalid IN (1,2,3,4,5);",
+            tables=_SQLITE_OPTINS_TABLE,
+    ),
+    FewShotExample(
+            input="Get userid and countrycode from optins",
+            query="SELECT userid, countrycode FROM optins LIMIT 100;",
+            tables=_SQLITE_OPTINS_TABLE,
+    ),
+    FewShotExample(
+            input="Get userid, countrycode, gender from optins",
+            query="SELECT userid, countrycode, gender FROM optins LIMIT 100;",
+            tables=_SQLITE_OPTINS_TABLE,
+    ),
+    FewShotExample(
             input="Get optins for verticals 1,2,3,4,5",
             query="SELECT * FROM optins WHERE verticalid IN (1,2,3,4,5);",
             tables=_SQLITE_OPTINS_TABLE,

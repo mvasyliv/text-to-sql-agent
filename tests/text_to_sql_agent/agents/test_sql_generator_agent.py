@@ -82,9 +82,41 @@ class TestGenerateReadOnlySql:
             dialect="sqlite",
         )
         assert result.intent == "llm"
-        assert result.sql == "SELECT userid FROM activities_eventdate LIMIT 5"
+        assert "SELECT DISTINCT userid FROM activities_eventdate LIMIT 5" == result.sql
         assert "Few-Shot Examples:" in result.prompt
         assert result.llm_status == "ok"
+
+    def test_llm_only_mode_uses_llm_when_available(self, monkeypatch):
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: ("SELECT userid FROM activities_eventdate LIMIT 5", "ok"),
+        )
+        result = generate_read_only_sql(
+            "Get users",
+            _schema_context(),
+            dialect="sqlite",
+            generation_strategy="llm_only",
+        )
+        assert result.intent == "llm"
+        assert "SELECT DISTINCT userid FROM activities_eventdate LIMIT 5" == result.sql
+
+    def test_llm_only_mode_raises_when_llm_unavailable(self, monkeypatch):
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "missing_api_key"),
+        )
+        try:
+            generate_read_only_sql(
+                "Show all users",
+                _schema_context(),
+                dialect="sqlite",
+                generation_strategy="llm_only",
+            )
+            assert False, "Expected RuntimeError"
+        except RuntimeError as exc:
+            assert "LLM-only generation failed" in str(exc)
     def test_unsafe_llm_response_falls_back_to_deterministic(self, monkeypatch):
         monkeypatch.setattr(
             sql_generator_agent_module,
@@ -111,7 +143,7 @@ class TestGenerateReadOnlySql:
             selected_tables=["activities_eventdate"],
         )
         assert result.intent == "few_shot"
-        assert "SELECT userid FROM activities_eventdate" in result.sql
+        assert "SELECT DISTINCT userid FROM activities_eventdate" in result.sql
         assert "countrycode = 'US'" in result.sql
         assert "countrycodegeo = 'US'" in result.sql
         assert result.llm_user_notice is not None
@@ -161,7 +193,8 @@ class TestGenerateReadOnlySql:
             selected_tables=["activities_eventdate"],
         )
         assert result.intent == "list"
-        assert result.sql.startswith('SELECT userid FROM "activities_eventdate"')
+        assert result.sql.startswith('SELECT DISTINCT userid FROM "activities_eventdate"')
+        assert "countrycode IN ('GB', 'PL')" in result.sql or 'countrycode IN ("GB", "PL")' in result.sql
         assert "countrycode IN ('GB', 'PL')" in result.sql
         assert "countrycodegeo IN ('GB', 'PL')" in result.sql
         assert result.sql.endswith("LIMIT 100")
@@ -179,7 +212,8 @@ class TestGenerateReadOnlySql:
             selected_tables=["activities_eventdate"],
         )
         assert result.intent == "list"
-        assert result.sql.startswith('SELECT userid FROM "activities_eventdate"')
+        assert result.sql.startswith('SELECT DISTINCT userid FROM "activities_eventdate"')
+        assert "countrycode IN ('GB', 'PL')" in result.sql or 'countrycode IN ("GB", "PL")' in result.sql
         assert "countrycode IN ('GB', 'PL')" in result.sql
         assert "countrycodegeo IN ('GB', 'PL')" in result.sql
 
@@ -195,6 +229,177 @@ class TestGenerateReadOnlySql:
             dialect="sqlite",
         )
         assert result.llm_user_notice is None
+
+    def test_optins_userid_with_verticals_few_shot(self, monkeypatch):
+        """Test that 'get userid from optins for verticals' uses correct few-shot example."""
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        optins_schema = (
+            "-- Database: testdb (sqlite)\n\n"
+            "TABLE optins\n"
+            "  userid integer\n"
+            "  verticalid integer\n"
+            "  countrycode text\n"
+            "  gender text\n"
+            "  dtentered integer"
+        )
+        result = generate_read_only_sql(
+            "get list userid from optins for verticals 1,2,3,4,5",
+            optins_schema,
+            dialect="sqlite",
+            selected_tables=["optins"],
+        )
+        assert result.intent == "few_shot"
+        assert "SELECT DISTINCT userid FROM" in result.sql
+        assert "verticalid IN (1,2,3,4,5)" in result.sql
+        assert "verticalid IN (1,2,3,4,5)" in result.sql
+        assert "SELECT *" not in result.sql
+
+    def test_optins_partial_country_name_rewrites_few_shot_projection(self, monkeypatch):
+        """When user writes partial field names, map to schema column in few-shot SQL."""
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        optins_schema = (
+            "-- Database: testdb (sqlite)\n\n"
+            "TABLE optins\n"
+            "  userid integer\n"
+            "  verticalid integer\n"
+            "  countrycode text\n"
+            "  gender text\n"
+            "  dtentered integer"
+        )
+        result = generate_read_only_sql(
+            "get country frop optins for verticals 1,2,3,4,5",
+            optins_schema,
+            dialect="sqlite",
+            selected_tables=["optins"],
+        )
+        assert result.intent == "few_shot"
+        assert "SELECT DISTINCT countrycode FROM optins" in result.sql
+        assert "verticalid IN (1,2,3,4,5)" in result.sql
+        assert "verticalid IN (1,2,3,4,5)" in result.sql
+        assert "SELECT *" not in result.sql
+
+    def test_extract_projection_matches_partial_country_token(self):
+        """Direct projection extraction maps country -> countrycode."""
+        projection = sql_generator_agent_module._extract_projection_from_question(
+            "get country frop optins for verticals 1,2,3,4,5",
+            ["userid", "verticalid", "countrycode", "gender", "dtentered"],
+        )
+        assert projection == "countrycode"
+
+    def test_extract_projection_matches_geo_alias(self):
+        projection = sql_generator_agent_module._extract_projection_from_question(
+            "get geo from activities where country UA",
+            ["userid", "countrycode", "countrycodegeo"],
+        )
+        assert projection == "countrycodegeo"
+
+    def test_extract_projection_matches_entered_alias(self):
+        projection = sql_generator_agent_module._extract_projection_from_question(
+            "get entered from optins for verticals 1,2,3,4,5",
+            ["userid", "verticalid", "countrycode", "gender", "dtentered"],
+        )
+        assert projection == "dtentered"
+
+    def test_optins_entered_alias_rewrites_few_shot_projection(self, monkeypatch):
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        optins_schema = (
+            "-- Database: testdb (sqlite)\n\n"
+            "TABLE optins\n"
+            "  userid integer\n"
+            "  verticalid integer\n"
+            "  countrycode text\n"
+            "  gender text\n"
+            "  dtentered integer"
+        )
+        result = generate_read_only_sql(
+            "get entered from optins for entered from 1609477200 to 1640581200",
+            optins_schema,
+            dialect="sqlite",
+            selected_tables=["optins"],
+        )
+        assert result.intent == "few_shot"
+        assert "SELECT DISTINCT dtentered FROM optins" in result.sql
+        assert "dtentered >= 1609477200" in result.sql
+        assert "dtentered <= 1640581200" in result.sql
+        assert "dtentered >= 1609477200" in result.sql
+        assert "dtentered <= 1640581200" in result.sql
+        assert "SELECT *" not in result.sql
+
+    def test_activities_geo_alias_rewrites_few_shot_projection(self, monkeypatch):
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        result = generate_read_only_sql(
+            "get geo from activities for country UA",
+            _activities_schema_context(),
+            dialect="sqlite",
+            selected_tables=["activities_eventdate"],
+        )
+        assert result.intent == "few_shot"
+        assert "SELECT DISTINCT countrycodegeo FROM activities_eventdate" in result.sql
+        assert "countrycode = 'UA'" in result.sql
+        assert "countrycodegeo = 'UA'" in result.sql
+    def test_optins_single_column_gets_distinct(self, monkeypatch):
+        """Single column projections should get DISTINCT to avoid duplicates."""
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        optins_schema = (
+            "-- Database: testdb (sqlite)\n\n"
+            "TABLE optins\n"
+            "  userid integer\n"
+            "  verticalid integer\n"
+            "  countrycode text\n"
+            "  gender text\n"
+            "  dtentered integer"
+        )
+        result = generate_read_only_sql(
+            "get country from optins for verticals 1,2,3,4,5",
+            optins_schema,
+            dialect="sqlite",
+            selected_tables=["optins"],
+        )
+        assert result.intent == "few_shot"
+        assert "SELECT DISTINCT countrycode" in result.sql
+        assert "verticalid IN (1,2,3,4,5)" in result.sql
+
+    def test_multiple_columns_no_distinct(self):
+        """Multiple columns should not get DISTINCT."""
+        projection = sql_generator_agent_module._extract_projection_from_question(
+            "get country and userid from optins",
+            ["userid", "verticalid", "countrycode", "gender"],
+        )
+        assert projection == "countrycode, userid"
+
+    def test_maybe_add_distinct_skips_select_star(self):
+        """SELECT * should not get DISTINCT."""
+        sql = "SELECT * FROM optins WHERE verticalid IN (1,2,3,4,5);"
+        result = sql_generator_agent_module._maybe_add_distinct_for_single_column(sql)
+        assert result == sql
+        assert "DISTINCT" not in result
+
+    def test_maybe_add_distinct_skips_aggregations(self):
+        """Aggregations should not get DISTINCT."""
+        sql = "SELECT COUNT(*) FROM optins WHERE verticalid IN (1,2,3,4,5);"
+        result = sql_generator_agent_module._maybe_add_distinct_for_single_column(sql)
+        assert result == sql
+        assert "DISTINCT" not in result
 class TestBuildSqlGeneratorNode:
     def test_node_populates_generated_sql_and_rationale(self):
         node = build_sql_generator_node(max_limit=25)
@@ -222,3 +427,20 @@ class TestBuildSqlGeneratorNode:
         assert result["generated_sql"] is None
         assert result["status"] == "failed"
         assert "failed to generate SQL" in result["error_message"]
+
+    def test_node_llm_only_failure_sets_failed_status(self, monkeypatch):
+        monkeypatch.setattr(
+            sql_generator_agent_module,
+            "_generate_sql_with_llm",
+            lambda prompt: (None, "disabled"),
+        )
+        node = build_sql_generator_node(max_limit=25, generation_strategy="llm_only")
+        state = {
+            "user_question": "Show all users",
+            "schema_context": _schema_context(),
+            "dialect": "sqlite",
+        }
+        result = node(state)
+        assert result["generated_sql"] is None
+        assert result["status"] == "failed"
+        assert "LLM-only generation failed" in result["error_message"]

@@ -8,6 +8,65 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-17
+
+### T-2026-06-17-135 - Add LLM-only SQL generation strategy without fallback
+
+- **Issue**: Existing SQL generation always used fallback chain (`LLM -> few-shot -> deterministic`), but user requested a variant that uses only LLM generation.
+- **Solution**:
+  - Added `generation_strategy` parameter to `generate_read_only_sql()` with supported values: `auto`, `llm_only`.
+  - Added strategy validation via `_normalize_generation_strategy()`.
+  - Implemented `llm_only` behavior: when LLM output is unavailable/unsafe, raise an explicit runtime error instead of using few-shot or deterministic fallback.
+  - Extended `build_sql_generator_node()` to accept default `generation_strategy` and allow per-request override from state (`sql_generation_strategy`).
+  - Added `generation_strategy` to SQL generator observability metadata and log message.
+  - Removed duplicate dead code block in `_maybe_add_distinct_for_single_column()` introduced in prior edit.
+- **Validation**:
+  - Added tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py` for:
+    - successful `llm_only` mode when LLM returns SQL,
+    - explicit failure in `llm_only` mode when LLM is unavailable,
+    - SQL generator node failure path in `llm_only` mode.
+  - Ran SQL generator test suite: `30 passed`.
+- **Outcome**: The project now supports an explicit "LLM-only" SQL generation path with deterministic failure semantics when LLM cannot produce valid read-only SQL.
+
+### T-2026-06-17-134 - Add automatic DISTINCT for single-column projection queries
+
+- **Issue**: Single-column list requests returned duplicate values (for example, `get country from optins for verticals 1,2,3,4,5` produced repeated country codes).
+- **Root cause**: SQL projection adaptation correctly mapped requested columns, but no deduplication step existed for single-column `SELECT` queries.
+- **Solution**: Added `_maybe_add_distinct_for_single_column()` in `src/text_to_sql_agent/agents/sql_generator_agent.py` and integrated it in all generation paths:
+  - deterministic SQL output,
+  - few-shot SQL output (including `SELECT *` projection rewrites),
+  - LLM SQL output when it returns a simple single-column projection.
+- **Safety guards**:
+  - Skip `DISTINCT` for `SELECT *`.
+  - Skip `DISTINCT` for grouped queries (`GROUP BY`).
+  - Skip `DISTINCT` for aggregate projections (`COUNT(`, `SUM(`, `AVG(`, `MIN(`, `MAX(`).
+- **Validation**:
+  - Added focused tests for DISTINCT behavior in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Updated existing projection/few-shot expectations to include DISTINCT where applicable.
+  - Ran SQL generator test suite: `27 passed`.
+  - Ran full project test suite: `611 passed`.
+- **Outcome**: Single-field list queries now return unique values by default, aligning generated SQL with user expectations for deduplicated listings.
+
+### T-2026-06-17-130 - Add few-shot example for userid query with verticals for optins table
+
+- **Issue**: User asked for "get list userid from optins for verticals 1,2,3,4,5" but agent generated `SELECT * FROM optins WHERE verticalid IN (1,2,3,4,5);` instead of selecting only userid column.
+- **Root cause**: The few-shot example registry for optins table had only "Get optins for verticals 1,2,3,4,5" → `SELECT *`, without an explicit example showing that userid projection should be selected when requested.
+- **Solution**: Added new few-shot example to `src/text_to_sql_agent/prompts/few_shot_examples_optins.py`:
+  ```python
+  FewShotExample(
+      input="Get userid from optins for verticals 1,2,3,4,5",
+      query="SELECT userid FROM optins WHERE verticalid IN (1,2,3,4,5);",
+      tables=_SQLITE_OPTINS_TABLE,
+  ),
+  ```
+  - Placed **before** the generic "Get optins for verticals" example so LLM sees the userid variant first.
+  - Mirrors the pattern already established for activities_eventdate (which had similar examples).
+- **Validation**:
+  - Verified all 6 few-shot examples for optins load correctly.
+  - Added regression test `test_optins_userid_with_verticals_few_shot()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - All 17 SQL generator tests pass.
+- **Outcome**: Agent now correctly generates `SELECT userid FROM optins WHERE verticalid IN (...)` when users explicitly request userid with vertical filters.
+
 ## 2026-06-16
 
 ### T-2026-06-16-129 - Refactor activities_eventdate few-shot examples into dedicated module
@@ -1920,3 +1979,70 @@ LOG_LEVEL_REPOSITORY=DEBUG
 - Updated `.gitignore` to exclude `.env`, `.env.prod`, `.env.local`.
 - Added `data/` and `logs/` directories to ignore list.
 - Added IDE and OS files to ignore list (VS Code, IntelliJ, .DS_Store, etc.).
+
+## 2026-06-17 (continued)
+
+### T-2026-06-17-133 - Extend shorthand projection aliases for geo/date/id field requests
+
+- **Goal**: Improve projection extraction when users do not know exact schema column names and use shorthand terms.
+- **Implementation**:
+  - Extended `_PROJECTION_ALIASES` in `sql_generator_agent.py` with additional mappings:
+    - `geo`, `countrygeo`, `geocountry` -> `countrycodegeo`
+    - `uid`, `user_id` -> `userid`
+    - `vid`, `vertical_id` -> `verticalid`
+    - `entered`, `entry`, `date`, `datetime`, `timestamp` -> `dtentered`
+  - Reused existing tolerant projection rewrite flow so few-shot SQL templates with `SELECT *` are rewritten to inferred aliases while preserving WHERE clauses.
+- **Validation**:
+  - Added tests:
+    - `test_extract_projection_matches_geo_alias()`
+    - `test_extract_projection_matches_entered_alias()`
+    - `test_optins_entered_alias_rewrites_few_shot_projection()`
+    - `test_activities_geo_alias_rewrites_few_shot_projection()`
+  - Ran `pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q` -> all tests passed.
+- **Outcome**: Shorthand prompts like `get geo ...` and `get entered ...` now generate column-specific SELECT projections without requiring users to know canonical schema names.
+
+### T-2026-06-17-132 - Map partial field names to schema columns and adapt few-shot SELECT projection
+
+- **Problem**: User prompts can include partial or non-exact field names (for example, `country`) and typos (`frop`). In these cases, few-shot matching could return `SELECT *` even when a specific projection was intended.
+- **Root cause**:
+  - Projection extraction accepted only exact column tokens.
+  - Few-shot SQL reuse was applied before deterministic projection logic and did not rewrite `SELECT *`.
+- **Implementation**:
+  - Added tolerant token-to-column resolution in `sql_generator_agent.py`:
+    - alias mapping (`country` -> `countrycode`, `user` -> `userid`, `vertical` -> `verticalid`),
+    - prefix/substring matching for partial names,
+    - close-match fallback using `difflib.get_close_matches`.
+  - Hardened projection extraction boundary markers to stop parsing on SQL-clause words and common typo separators (`frop`, `form`, `fro`).
+  - Added safe projection rewrite helper for few-shot SQL:
+    - when a matched few-shot query starts with `SELECT *`, replace `*` with inferred projection,
+    - keep original few-shot WHERE clause (for example, `verticalid IN (...)`),
+    - preserve read-only SQL validation before returning rewritten SQL.
+- **Validation**:
+  - Added regression test `test_optins_partial_country_name_rewrites_few_shot_projection()`.
+  - Added direct extraction test `test_extract_projection_matches_partial_country_token()`.
+  - Ran `pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q` -> all tests passed.
+- **Outcome**: Query phrasing like `get country frop optins for verticals 1,2,3,4,5` now resolves to `SELECT countrycode ...` while preserving the few-shot vertical filter.
+
+### T-2026-06-17-131 - Implement deterministic column projection extraction from user questions
+
+- **Problem**: System required few-shot examples for each combination of columns (userid, countrycode, gender, etc.). This does not scale as table schema grows.
+- **Solution 1 - Deterministic parser**: Added `_extract_projection_from_question(user_question, table_columns)` to parse explicitly requested columns from natural language using regex patterns:
+  - Matches patterns like "get <col1> and <col2>" or "get <col1>, <col2>"
+  - Replaces "and" with commas for consistent parsing
+  - Filters extracted names against valid schema columns (case-insensitive matching)
+  - Returns comma-separated valid columns or None if no explicit columns found
+- **Solution 2 - Priority-based projection selection**: Updated `_choose_projection()` with three-tier priority:
+  1. **Tier 1**: Explicit columns parsed from question (deterministic, high confidence)
+  2. **Tier 2**: Token-based heuristic for backward compatibility (e.g., userid in tokens)
+  3. **Tier 3**: Default to SELECT * (safe fallback)
+- **Supporting few-shot examples**: Added 2 new few-shot examples to `few_shot_examples_optins.py`:
+  - "Get userid and countrycode from optins" → `SELECT userid, countrycode FROM optins LIMIT 100`
+  - "Get userid, countrycode, gender from optins" → `SELECT userid, countrycode, gender FROM optins LIMIT 100`
+  - These serve as reference templates for LLM and provide coverage for common multi-column queries
+- **Validation**:
+  - All 8 unit tests for projection extraction pass (single column, multiple with 'and', multiple with commas, invalid columns filtered, no explicit columns returns None)
+  - All 72 existing tests still pass (backward compatibility maintained)
+  - End-to-end SQL generation tests verify correct projection in deterministic and few-shot modes
+- **Impact**: System now dynamically handles arbitrary column combinations without requiring explicit few-shot examples for each variant. Scales with table schema changes.
+- **Architecture**: Follows functional-first style — pure projection extraction function with no side effects, testable in isolation.
+
