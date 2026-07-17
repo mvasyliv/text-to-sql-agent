@@ -20,6 +20,23 @@ The format is intentionally simple and uses dated sections until versioned relea
   - Updated `docs/TASKS.md` and `docs/WORKLOG.md` to reflect the planning work on top of the current repository documentation state.
   - Keeps task trace history accurate while the Gradio implementation tasks remain in `planned` status.
 
+- Started the Gradio launcher and app scaffold implementation (T-2026-07-17-145):
+  - Added `main_gradio.py` and `src/text_to_sql_agent/ui/gradio_app.py` as the first runtime and UI wiring for the Gradio-based interface.
+  - Added `gradio` to `pyproject.toml` so the app can be launched in a Python environment with Gradio installed.
+  - The scaffold reuses existing UI orchestration helpers and renderers to keep the new UI thin.
+
+- Marked the Gradio launcher and app scaffold implementation as complete (T-2026-07-17-145):
+  - Updated `docs/TASKS.md` so the scaffold task now appears in `COMPLETED` with status `done`.
+  - The task trace now records the scaffold as delivered, while the remaining Gradio tasks stay open.
+
+- Added the Gradio shell launcher for the new runtime (T-2026-07-17-145):
+  - Created `run_main_gradio.sh` with canonical interpreter checks and free localhost port selection.
+  - The launcher runs `main_gradio.py` from the repository root so it picks up the `.env` conversation DB path and other runtime settings.
+
+- Fixed the Gradio chart rendering payload (T-2026-07-17-145):
+  - Updated the Gradio UI layer to convert the chart spec into a Plotly `Figure` before handing it to `gr.Plot`.
+  - Prevents the runtime `AttributeError` caused by passing a raw dict into the Plot component.
+
 
 ## 2026-06-29
 
@@ -70,6 +87,32 @@ _None_
   - Documented launcher usage in `README.md`.
 
 ## 2026-06-17
+
+- Completed the Gradio documentation slice (T-2026-07-17-150):
+  - Updated `README.md` with the Gradio launcher command, optional identity env vars, and operator workflow.
+  - Updated `docs/ARCHITECTURE.md` so Gradio is documented as a first-class web runtime alongside Chainlit and Streamlit.
+
+- Completed the Gradio launcher validation slice (T-2026-07-17-149):
+  - Added focused tests for `main_gradio.py` runtime preparation and Gradio launch wiring.
+  - Added narrow shell-launcher validation to confirm `run_main_gradio.sh` remains syntax-safe and starts the entrypoint under the canonical environment.
+  - Removed a brittle shell preflight from `run_main_gradio.sh` so the launcher works with the current symlinked canonical venv layout.
+  - Fixed the Gradio `demo.load()` output ordering so the initial page-load callback no longer shifts update payloads into the wrong components.
+  - Centralized Gradio refresh-payload construction and added regression coverage for payload ordering.
+
+- Completed the Gradio results, chart, trace, and export slice (T-2026-07-17-148):
+  - Gradio result tabs now keep idle state clean while rendering populated table, chart, trace, and export outputs from the existing helper layer after a query completes.
+  - The Trace tab is now hidden until real query state exists.
+  - Added regression coverage for idle and populated result-panel rendering.
+
+- Completed the Gradio chat and SQL approval flow slice (T-2026-07-17-147):
+  - Confirmed the Gradio chat input and SQL decision actions run through the existing `start_query_turn()` and `resume_query_turn()` helpers.
+  - Approval controls now appear only while a pending SQL review exists.
+  - Added regression coverage for reject and edited-SQL resume flows.
+
+- Completed the Gradio session state and history UI slice (T-2026-07-17-146):
+  - The initial Gradio render now loads the rendered view model so saved conversations appear in the dropdown before any interaction.
+  - User profile and active conversation state now reset correctly when switching users or starting a new conversation.
+  - Added focused regression tests for saved conversation choices and user profile reset behavior.
 
 ### Planned
 

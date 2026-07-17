@@ -10,6 +10,59 @@ Rules:
 
 ## 2026-07-17
 
+### T-2026-07-17-150 - Document Gradio launcher and operator workflow
+
+- Updated `README.md` to document the Gradio launcher, optional identity env vars, local launch command, and operator flow for session changes, history loading, SQL approval, and result inspection.
+- Updated `docs/ARCHITECTURE.md` to place Gradio alongside Chainlit and Streamlit in the runtime entrypoint list, UI-layer description, and user-scoped history flow.
+- Validation:
+  - Documentation-only change; reviewed by focused source inspection after the edit.
+
+### T-2026-07-17-149 - Add focused Gradio UI tests and launcher smoke validation
+
+- Added focused launcher coverage for `main_gradio.py`, including runtime-environment preparation and `app.queue()` / `app.launch()` wiring.
+- Kept the existing Gradio UI helper tests as the narrow regression surface for state, approval, and result-panel behavior.
+- Simplified `run_main_gradio.sh` by removing the brittle interpreter preflight that misclassified the symlinked canonical venv path in this environment.
+- Fixed a live Gradio load-path regression in `src/text_to_sql_agent/ui/gradio_app.py`: `demo.load()` still used the old output list and shifted update payloads into the wrong components, causing the `Dataframe` component to receive an empty string path.
+- Centralized Gradio refresh-payload construction in one helper and added a regression test that locks the result-table and trace/export positions in that payload.
+- Validation:
+  - `venvtext2sql/bin/python -m py_compile main_gradio.py tests/text_to_sql_agent/ui/test_main_gradio.py tests/text_to_sql_agent/ui/test_gradio_app.py`
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_gradio_app.py tests/text_to_sql_agent/ui/test_main_gradio.py -q` -> `17 passed`
+  - `bash -n run_main_gradio.sh`
+  - `timeout 8s /home/mykola/prj_p/text-to-sql-agent/run_main_gradio.sh` -> launcher selected `GRADIO_PORT=7860` and started the local Gradio server successfully before timeout ended the process.
+  - `venvtext2sql/bin/python -m py_compile src/text_to_sql_agent/ui/gradio_app.py tests/text_to_sql_agent/ui/test_gradio_app.py`
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_gradio_app.py -q` -> `15 passed`
+  - `timeout 8s /home/mykola/prj_p/text-to-sql-agent/run_main_gradio.sh` -> launcher selected `GRADIO_PORT=7861` and started the local Gradio server successfully after the load-path fix.
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_gradio_app.py -q` -> `16 passed`
+
+### T-2026-07-17-148 - Render Gradio results, chart, trace, and export panels
+
+- Completed the Gradio result-panel slice using the existing table/chart/export helpers already shared by the UI layer.
+- Kept result table rendering in a Gradio `Dataframe`, chart rendering through Plotly `Figure` conversion, and CSV/JSON downloads through the existing export helper.
+- Tightened trace behavior so the Trace tab stays hidden for idle state and becomes visible only when there is real query state to inspect.
+- Added focused regression coverage for idle-state result panels and populated result/chart/trace/export rendering.
+- Validation:
+  - `python -m py_compile src/text_to_sql_agent/ui/gradio_app.py tests/text_to_sql_agent/ui/test_gradio_app.py`
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_gradio_app.py -q` -> `15 passed`
+
+### T-2026-07-17-147 - Wire Gradio chat input and SQL approval flow
+
+- Completed the Gradio chat and SQL approval slice over the existing UI handlers.
+- Kept `handle_send_question()` on top of `start_query_turn()` and `handle_resume_with_decision()` / `handle_submit_edited_sql()` on top of `resume_query_turn()`.
+- Tightened the Gradio approval UX so approve, reject, and edit controls are only visible while a pending SQL review exists.
+- Fixed the rejected-decision summary path so the Gradio chat shows `SQL was rejected.` instead of an empty assistant message.
+- Added focused regression tests for reject and edited-SQL decision paths plus approval visibility state.
+- Validation:
+  - `python -m py_compile src/text_to_sql_agent/ui/gradio_app.py tests/text_to_sql_agent/ui/test_gradio_app.py`
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src venvtext2sql/bin/python -m pytest tests/text_to_sql_agent/ui/test_gradio_app.py -q` -> `12 passed`
+
+### T-2026-07-17-146 - Add Gradio session state, user profile, and conversation history UI
+
+- Added Gradio startup rendering so the initial UI reflects the rendered session view model instead of showing empty history controls until the first interaction.
+- Kept the user profile and active conversation state in the Gradio state payload, with resets on identity changes and conversation starts.
+- Added focused regression coverage for saved conversation choices and user profile resets in the Gradio UI test slice.
+- Validation:
+  - Pending after the UI/test edit in this change set.
+
 ### T-2026-07-17-151 - Define Gradio UI rollout task plan on latest docs baseline
 
 - Re-read the current `docs/TASKS.md`, `docs/WORKLOG.md`, and `docs/CHANGELOG.md` because the local documentation baseline had moved forward after the previous planning pass.
@@ -23,6 +76,21 @@ Rules:
 - Added phase grouping, dependency order, and critical-path entries so the implementation can proceed incrementally from runtime seam to UX polish.
 - Validation:
   - Documentation-only planning change; reviewed via focused diff after the edit.
+
+
+### T-2026-07-17-145 - Add Gradio dependency and launcher scaffold
+
+- Started the first implementation slice for the Gradio runtime.
+- Added `gradio` to `pyproject.toml` so the new UI module has an explicit dependency.
+- Added `main_gradio.py` as a thin launcher and `src/text_to_sql_agent/ui/gradio_app.py` as the initial UI scaffold.
+- Added `run_main_gradio.sh` as the shell launcher with free-port selection and canonical interpreter checks.
+- The new app reuses the existing query handlers, history service, and render helpers rather than duplicating orchestration logic.
+- Fixed the Gradio chart integration so `gr.Plot` receives a Plotly `Figure` instead of a plain dict.
+- Marked the task as `done` in `docs/TASKS.md` after the scaffold landed.
+- Validation:
+  - Gradio was installed into the available Python environment for local runtime checks.
+  - `bash -n run_main_gradio.sh` passed.
+  - `timeout 5s ./run_main_gradio.sh` failed because the local `venvtext2sql/bin/python` interpreter symlink is not present in this environment.
 
 
 ## 2026-06-29

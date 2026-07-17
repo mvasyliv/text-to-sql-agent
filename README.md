@@ -22,9 +22,41 @@ PR title: type: short summary [T-YYYY-MM-DD-NNN]; merge to main only via PR.
   - Optional identity defaults via env vars:
     - `STREAMLIT_USER_ID`
     - `STREAMLIT_DISPLAY_NAME`
+- Gradio UI:
+  - `./run_main_gradio.sh`
+  - Optional identity defaults via env vars:
+    - `GRADIO_USER_ID`
+    - `GRADIO_DISPLAY_NAME`
 
-Both launchers load runtime environment values and pick a free localhost port when the corresponding `CHAINLIT_PORT` or `STREAMLIT_PORT` is not set.
+All web launchers load runtime environment values and pick a free localhost port when the corresponding `CHAINLIT_PORT`, `STREAMLIT_PORT`, or `GRADIO_PORT` is not set.
 Launchers require the canonical interpreter `venvtext2sql/bin/python` and do not fall back to system Python.
+
+## Gradio Operator Flow
+
+Use Gradio when you want a thin web UI over the existing query workflow without the Chainlit authentication shell.
+
+Run locally:
+
+```bash
+./run_main_gradio.sh
+```
+
+The launcher starts `main_gradio.py`, loads `.env` runtime values, picks a free localhost port when `GRADIO_PORT` is unset, and prints the browser URL.
+
+Operator workflow:
+- Apply the user profile in the left session panel when you need a different conversation owner or display name.
+- Start a new conversation to reset active state while keeping persisted history available in the dropdown.
+- Reopen a saved conversation from `Open conversation` to restore recent persisted messages for that user.
+- Enter a natural-language database question in the main panel and submit it.
+- Review the proposed SQL when the graph pauses for human approval, then choose `Approve`, `Reject`, or `Edit`.
+- If you choose `Edit`, resubmit the revised SQL through `Submit Edited SQL`.
+- Inspect the `Results`, `Chart`, `Trace`, and `Export` tabs after execution completes.
+
+Gradio UI behavior:
+- Conversation history is scoped by `GRADIO_USER_ID` / `GRADIO_DISPLAY_NAME` or the values applied in the session panel.
+- SQL approval controls appear only while a pending review exists.
+- The Trace tab stays hidden until the active state contains real query diagnostics.
+- CSV and JSON exports are generated from the current execution result through the shared export helper.
 
 ## Query Graph (Current)
 

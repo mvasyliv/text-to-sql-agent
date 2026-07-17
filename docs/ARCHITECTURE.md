@@ -3,7 +3,7 @@
 This document is the living reference for the architecture of the text-to-SQL agent.
 
 Current repository status:
-- Core request orchestration and web UI flows (Chainlit and Streamlit) are implemented.
+- Core request orchestration and web UI flows (Chainlit, Streamlit, and Gradio) are implemented.
 - User authentication and persistent conversation history are implemented over the conversation SQLite database.
 - This document describes the current architecture and the intended boundaries for future changes.
 
@@ -58,9 +58,18 @@ Its responsibilities are:
 Current runtime entrypoints:
 - `main_chainlit.py` launches Chainlit web runtime.
 - `main_streamlit.py` launches Streamlit web runtime.
+- `main_gradio.py` launches Gradio web runtime.
 - `main_terminal.py` provides terminal-mode interaction and schema shortcuts.
 - `src/text_to_sql_agent/ui/chainlit_app.py` contains Chainlit callback wiring.
 - `src/text_to_sql_agent/ui/streamlit_app.py` contains Streamlit interaction wiring.
+- `src/text_to_sql_agent/ui/gradio_app.py` contains Gradio interaction wiring.
+
+Web launcher scripts:
+- `run_main_chainlit.sh`
+- `run_main_streamlit.sh`
+- `run_main_gradio.sh`
+
+These launchers stay thin, prepare runtime environment values, and start the canonical `venvtext2sql` interpreter entrypoint for each UI runtime.
 
 ### Agents Layer
 
@@ -212,7 +221,7 @@ Current MCP direction for query execution:
 
 ## Auth and User-Scoped History Architecture
 
-The web runtime uses username/password authentication with user-isolated history.
+The web runtimes use user-scoped history, with authentication behavior depending on the UI shell.
 
 ### Auth Flow
 
@@ -221,6 +230,9 @@ The web runtime uses username/password authentication with user-isolated history
 3. `AuthService.authenticate_or_register()` validates credentials (or auto-registers if enabled).
 4. On success, callback returns a `cl.User` containing stable `identifier` (`user_id`) and `metadata.username`.
 5. On failure, callback returns `None`, and login is rejected.
+
+Gradio and Streamlit do not currently use the Chainlit password callback flow.
+Instead, they rely on explicit session identity values (`*_USER_ID`, `*_DISPLAY_NAME`) and persist conversations under that selected user identity.
 
 ### Conversation Persistence Model
 
@@ -247,7 +259,7 @@ User isolation is enforced at service boundary:
 - loading: `ConversationHistoryService.load_user_conversation(user_id, conversation_id)` verifies `conversation.user_id == user_id`,
 - violation path: raises `ConversationAccessError` and UI returns a safe denial message.
 
-The Chainlit UI does not directly bypass these checks when opening saved conversations.
+The web UIs do not directly bypass these checks when opening saved conversations.
 
 ### Chainlit History UX Flow
 
@@ -267,6 +279,32 @@ History actions:
   - resets pending approval/edit state.
 
 Follow-up messages are then routed through the currently active conversation state.
+
+### Gradio Session and History UX Flow
+
+On app startup:
+- `main_gradio.py` loads runtime environment values and creates the Gradio app.
+- `src/text_to_sql_agent/ui/gradio_app.py` builds a default UI state with `user_id`, `display_name`, active `conversation_id`, and pending approval markers.
+- the initial view model populates saved conversation choices for the active user before the first interaction.
+
+Session actions:
+- `Apply User`
+  - normalizes the selected identity,
+  - resets active conversation state when the user changes,
+  - refreshes saved history choices for that user,
+- `Start New Conversation`
+  - allocates a new `conversation_id`,
+  - clears pending approval/edit state,
+  - preserves persisted history for later reopening,
+- `Load Selected`
+  - validates ownership through `ConversationHistoryService`,
+  - restores recent persisted messages,
+  - resumes the saved `graph_thread_id` for continued query flow.
+
+Approval and result actions:
+- `Send` routes the question through `start_query_turn()`.
+- `Approve`, `Reject`, and `Submit Edited SQL` resume the graph through `resume_query_turn()`.
+- `Results`, `Chart`, `Trace`, and `Export` tabs render from the shared UI helper layer after execution completes.
 
 ### Utils Layer
 
@@ -288,6 +326,7 @@ A typical request should follow this flow:
 The application receives a natural language question and optional execution context.
 
 For Chainlit web flow, authenticated identity and active `conversation_id` are already present in session state before message handling.
+For Gradio and Streamlit web flows, the UI shell establishes the active user/session state before routing the question into the shared handlers.
 
 2. Context preparation
 Services load relevant schema information, table metadata, business rules, and any retrieval-augmented context.
@@ -316,6 +355,7 @@ Services convert raw rows into a response that can include tabular data, summari
 The application returns the SQL, result set, and any explanation that should be exposed to the caller.
 
 In web runtime, messages and approval events are persisted under the active conversation so the user can reopen and continue later.
+The Gradio and Streamlit shells share the same persistence and handler boundaries as Chainlit, but they drive them through explicit UI state instead of the Chainlit callback session model.
 
 ## Cross-Cutting Concerns
 

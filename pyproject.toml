@@ -9,6 +9,7 @@ dependencies = [
     "chainlit>=2.9.2",
     "chromadb>=1.5.9",
     "langchain>=1.2.18",
+    "gradio>=6.20.0",
     "langchain-openai>=1.2.1",
     "langgraph>=1.1.10",
     "loguru>=0.7.3",
