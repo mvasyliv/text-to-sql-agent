@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is intentionally simple and uses dated sections until versioned releases are introduced.
 
 
+## 2026-07-17
+
+### Planned
+
+- Added planned Gradio UI rollout tasks on the latest docs baseline (T-2026-07-17-151):
+  - Added a concrete task breakdown in `docs/TASKS.md` for introducing a Gradio runtime to the project.
+  - Captured the intended sequence for launcher setup, Gradio session/history UI, SQL approval flow, result panels, focused validation, and documentation follow-up.
+  - Makes the Gradio work implementable as incremental tracked tasks instead of an undifferentiated UI spike.
+
+### Added
+
+- Added a completed planning record for the refreshed Gradio rollout task breakdown (T-2026-07-17-151):
+  - Updated `docs/TASKS.md` and `docs/WORKLOG.md` to reflect the planning work on top of the current repository documentation state.
+  - Keeps task trace history accurate while the Gradio implementation tasks remain in `planned` status.
+
+
 ## 2026-06-29
 
 ### Planned

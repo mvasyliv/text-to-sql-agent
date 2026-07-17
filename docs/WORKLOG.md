@@ -8,6 +8,23 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-07-17
+
+### T-2026-07-17-151 - Define Gradio UI rollout task plan on latest docs baseline
+
+- Re-read the current `docs/TASKS.md`, `docs/WORKLOG.md`, and `docs/CHANGELOG.md` because the local documentation baseline had moved forward after the previous planning pass.
+- Added six planned tasks to `docs/TASKS.md` for the Gradio rollout sequence on top of the current repository state:
+  - dependency and launcher scaffold,
+  - session state, user profile, and conversation history,
+  - chat input and SQL approval flow wiring,
+  - results/chart/trace/export panels,
+  - focused tests and launcher smoke validation,
+  - README and architecture follow-up documentation.
+- Added phase grouping, dependency order, and critical-path entries so the implementation can proceed incrementally from runtime seam to UX polish.
+- Validation:
+  - Documentation-only planning change; reviewed via focused diff after the edit.
+
+
 ## 2026-06-29
 
 ### T-2026-06-29-143 - Log concrete LLM fallback reasons to terminal

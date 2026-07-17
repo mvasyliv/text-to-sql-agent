@@ -17,23 +17,47 @@ Rules:
 
 ## OPEN
 
+| ID | Date | Title | Status | Summary | Related Files |
+| --- | --- | --- | --- | --- | --- |
+| T-2026-07-17-150 | 2026-07-17 | Document Gradio launcher and operator workflow | planned | Update README and architecture docs for the Gradio runtime, launch command, operator flow, and UI-layer placement after implementation lands. | `README.md`, `docs/ARCHITECTURE.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-07-17-149 | 2026-07-17 | Add focused Gradio UI tests and launcher smoke validation | planned | Add focused tests for Gradio state helpers and event handlers, plus a narrow smoke validation path for the new launcher entrypoint. | `tests/text_to_sql_agent/ui/test_gradio_app.py`, `main_gradio.py`, `src/text_to_sql_agent/ui/gradio_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-07-17-148 | 2026-07-17 | Render Gradio results, chart, trace, and export panels | planned | Add Gradio result tabs for table output, Plotly chart rendering, execution trace visibility, and CSV/JSON export over the existing render and export helpers. | `src/text_to_sql_agent/ui/gradio_app.py`, `src/text_to_sql_agent/ui/renderers.py`, `src/text_to_sql_agent/ui/handlers.py`, `tests/text_to_sql_agent/ui/test_gradio_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-07-17-147 | 2026-07-17 | Wire Gradio chat input and SQL approval flow | planned | Connect the Gradio chat UI and SQL approval actions to `start_query_turn()` and `resume_query_turn()` so the existing graph flow drives approve, reject, and edited-SQL decisions. | `src/text_to_sql_agent/ui/gradio_app.py`, `src/text_to_sql_agent/ui/handlers.py`, `tests/text_to_sql_agent/ui/test_gradio_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-07-17-146 | 2026-07-17 | Add Gradio session state, user profile, and conversation history UI | planned | Implement Gradio state handling for user identity, active conversation, pending approval state, and persisted conversation history loading. | `src/text_to_sql_agent/ui/gradio_app.py`, `src/text_to_sql_agent/ui/handlers.py`, `src/text_to_sql_agent/services/conversation_history_service.py`, `tests/text_to_sql_agent/ui/test_gradio_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+| T-2026-07-17-145 | 2026-07-17 | Add Gradio dependency and launcher scaffold | planned | Introduce the Gradio runtime dependency, thin launcher entrypoint, and initial app scaffold following the existing web UI launcher pattern. | `pyproject.toml`, `uv.lock`, `main_gradio.py`, `src/text_to_sql_agent/ui/gradio_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
+
 ### Priority Phases (MVP -> Production Hardening)
 
-1. Phase 3 - Production Hardening
-	- No open tasks.
+1. Phase 2 - UI Runtime Expansion
+	- T-2026-07-17-145
+	- T-2026-07-17-146
+	- T-2026-07-17-147
+	- T-2026-07-17-148
+
+2. Phase 3 - Production Hardening
+	- T-2026-07-17-149
+	- T-2026-07-17-150
 
 ### Execution Order And Dependencies
 
+P2 (UI Runtime Expansion)
+	- T-2026-07-17-145 -> T-2026-07-17-146 -> T-2026-07-17-147 -> T-2026-07-17-148
+
 P3 (Production Hardening)
-	- None
+	- T-2026-07-17-148 -> T-2026-07-17-149 -> T-2026-07-17-150
 
 Critical path
+- T-2026-07-17-145
+- T-2026-07-17-146
+- T-2026-07-17-147
+- T-2026-07-17-148
 - D-2026-06-05-023
 
 ## COMPLETED
 
 | ID | Date | Title | Status | Summary | Related Files |
 | --- | --- | --- | --- | --- | --- |
+| T-2026-07-17-151 | 2026-07-17 | Define Gradio UI rollout task plan on latest docs baseline | done | Re-added a concrete planned-task breakdown for introducing a Gradio UI runtime on top of the current repository documentation state, covering launcher, UI state, approval flow, result panels, validation, and follow-up documentation. | `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-29-143 | 2026-06-29 | Log concrete LLM fallback reasons to terminal | done | Added `loguru` warnings and exceptions in the SQL generator so terminal logs now show why LLM generation returned `disabled`, `missing_api_key`, `client_unavailable`, `unsafe_output`, or `error`. This makes the root cause visible when the UI only shows the fallback notice. | `src/text_to_sql_agent/agents/sql_generator_agent.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-29-142 | 2026-06-29 | Expose llm_status in SQL approval UI | done | Added explicit `LLM status` display in Streamlit and Chainlit SQL approval messages so users can immediately see the concrete reason behind LLM fallback behavior (for example `missing_api_key`, `client_unavailable`, `error`). Added focused UI helper test assertions. | `src/text_to_sql_agent/ui/streamlit_app.py`, `src/text_to_sql_agent/ui/chainlit_app.py`, `tests/text_to_sql_agent/ui/test_streamlit_app.py`, `tests/text_to_sql_agent/ui/test_chainlit_app.py`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
 | T-2026-06-29-141 | 2026-06-29 | Enforce venvtext2sql-only interpreter policy in launchers | done | Removed system Python and uv fallbacks from Chainlit/Streamlit launchers and Python entrypoints so UI runtime starts only from `venvtext2sql`. Updated user docs and contributing commands to match the strict canonical interpreter policy. | `run_main_chainlit.sh`, `run_main_streamlit.sh`, `main_chainlit.py`, `main_streamlit.py`, `README.md`, `CONTRIBUTING.md`, `docs/TASKS.md`, `docs/WORKLOG.md`, `docs/CHANGELOG.md` |
