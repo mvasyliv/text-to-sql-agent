@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -16,21 +15,13 @@ APP_PATH = APP_ROOT / "src" / "text_to_sql_agent" / "ui" / "streamlit_app.py"
 
 
 def _build_streamlit_base_command() -> list[str]:
-    """Resolve a runnable Streamlit command for the current machine."""
+    """Build Streamlit command for the active interpreter only."""
     if importlib.util.find_spec("streamlit") is not None:
         return [sys.executable, "-m", "streamlit"]
 
-    streamlit_bin = shutil.which("streamlit")
-    if streamlit_bin:
-        return [streamlit_bin]
-
-    uv_bin = shutil.which("uv")
-    if uv_bin:
-        return [uv_bin, "run", "streamlit"]
-
     raise RuntimeError(
-        "Streamlit is unavailable. Install dependencies with 'uv sync' or install "
-        "streamlit in the active Python environment."
+        "Streamlit module is unavailable in the active interpreter. "
+        "Use venvtext2sql and run 'uv sync'."
     )
 
 

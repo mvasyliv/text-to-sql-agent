@@ -5,10 +5,11 @@ from __future__ import annotations
 from .dialect_scope import DialectName
 from .few_shot_models import FewShotExample
 from .few_shot_examples_activities_eventdate import SQLITE_ACTIVITIES_EVENTDATE_EXAMPLES
+from .few_shot_examples_optins import SQLITE_OPTINS_EXAMPLES
 
 
 
-SQLITE_FEW_SHOT_EXAMPLES: tuple[FewShotExample, ...] = SQLITE_ACTIVITIES_EVENTDATE_EXAMPLES
+SQLITE_FEW_SHOT_EXAMPLES: tuple[FewShotExample, ...] = SQLITE_ACTIVITIES_EVENTDATE_EXAMPLES + SQLITE_OPTINS_EXAMPLES    
 
 _FEW_SHOT_BY_DIALECT: dict[DialectName, tuple[FewShotExample, ...]] = {
     "sqlite": SQLITE_FEW_SHOT_EXAMPLES,

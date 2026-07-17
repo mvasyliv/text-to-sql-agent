@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import os
 import re
+from difflib import get_close_matches
 from dataclasses import dataclass
+
+from loguru import logger
 
 from text_to_sql_agent.prompts import build_sql_generation_prompt
 from text_to_sql_agent.prompts import get_few_shot_examples_for_tables
@@ -44,7 +47,52 @@ _COUNTRY_SINGLE_RE = re.compile(r"\bcountry\s+([A-Za-z]{2})\b", re.IGNORECASE)
 _NUMBER_RE = re.compile(r"\b\d+\b")
 _BLOCKED_SQL_TOKENS = ("insert", "update", "delete", "drop", "alter", "truncate")
 _LLM_UNAVAILABLE_STATUSES = {"disabled", "missing_api_key", "client_unavailable", "error"}
+_SUPPORTED_GENERATION_STRATEGIES = {"auto", "llm_only"}
 _COUNTRY_CODE_STOPWORDS = {"IN", "OR", "BY", "TO", "ON", "AS", "AT", "OF"}
+_PROJECTION_END_MARKERS = {
+    "from",
+    "frop",
+    "form",
+    "fro",
+    "where",
+    "for",
+    "with",
+    "having",
+    "group",
+    "order",
+    "limit",
+}
+_PROJECTION_NOISE_TOKENS = {
+    "list",
+    "all",
+    "the",
+    "a",
+    "an",
+    "of",
+    "me",
+    "please",
+}
+_PROJECTION_ALIASES = {
+    "country": "countrycode",
+    "countries": "countrycode",
+    "geo": "countrycodegeo",
+    "countrygeo": "countrycodegeo",
+    "geocountry": "countrycodegeo",
+    "user": "userid",
+    "users": "userid",
+    "uid": "userid",
+    "user_id": "userid",
+    "vertical": "verticalid",
+    "verticals": "verticalid",
+    "vid": "verticalid",
+    "vertical_id": "verticalid",
+    "entered": "dtentered",
+    "entry": "dtentered",
+    "date": "dtentered",
+    "datetime": "dtentered",
+    "timestamp": "dtentered",
+    "gender": "gender",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,10 +183,25 @@ def _resolve_openai_api_key() -> str | None:
 
 
 def _extract_sql_candidate(text: str) -> str:
-    fenced = _SQL_FENCE_RE.search(text)
+    raw = text.strip()
+    fenced = _SQL_FENCE_RE.search(raw)
     if fenced:
         return fenced.group(1).strip()
-    return text.strip()
+
+    if _is_read_only_sql(raw):
+        return raw
+
+    start_match = re.search(r"\b(?:select|with|explain)\b", raw, re.IGNORECASE)
+    if not start_match:
+        return raw
+
+    candidate = raw[start_match.start() :].strip()
+    if ";" in candidate:
+        first_statement = candidate.split(";", 1)[0].strip()
+        return f"{first_statement};"
+
+    first_line = candidate.splitlines()[0].strip() if candidate else ""
+    return first_line
 
 
 def _is_read_only_sql(sql: str) -> bool:
@@ -233,9 +296,143 @@ def _build_country_filter(
     return "(" + " OR ".join(clauses) + ")"
 
 
-def _choose_projection(tokens: list[str], table_columns: list[str]) -> str:
+def _resolve_projection_token_to_column(token: str, table_columns: list[str]) -> str | None:
+    """Resolve a user token to a schema column with tolerant matching."""
+    normalized = token.strip().lower()
+    if not normalized or normalized in _PROJECTION_NOISE_TOKENS:
+        return None
+
+    col_names_lower = {col.lower(): col for col in table_columns}
+    if normalized in col_names_lower:
+        return col_names_lower[normalized]
+
+    alias = _PROJECTION_ALIASES.get(normalized)
+    if alias and alias in col_names_lower:
+        return col_names_lower[alias]
+
+    starts_with = [col for low, col in col_names_lower.items() if low.startswith(normalized)]
+    if len(starts_with) == 1:
+        return starts_with[0]
+
+    contains = [col for low, col in col_names_lower.items() if normalized in low]
+    if len(contains) == 1 and len(normalized) >= 4:
+        return contains[0]
+
+    close = get_close_matches(normalized, list(col_names_lower.keys()), n=1, cutoff=0.8)
+    if close:
+        return col_names_lower[close[0]]
+
+    return None
+
+
+def _extract_projection_from_question(user_question: str, table_columns: list[str]) -> str | None:
+    """Extract explicitly requested columns from natural language.
+
+    Parse patterns like:
+    - "get userid and email from..."
+    - "get userid, countrycode from..."
+    - "get userid from..."
+
+    Returns comma-separated column names if found and valid, None otherwise.
+    """
+    if not user_question or not table_columns:
+        return None
+
+    # Match projection text after get/show/select and stop at known SQL-like clause markers.
+    match = re.search(r"(?:get|show|select)\s+(.+)$", user_question.lower())
+    if not match:
+        return None
+
+    requested_text = match.group(1)
+    raw_tokens = re.findall(r"\b\w+\b", requested_text)
+
+    requested: list[str] = []
+    for token in raw_tokens:
+        lowered = token.lower()
+        if lowered in _PROJECTION_END_MARKERS:
+            break
+        requested.append(lowered)
+
+    if not requested:
+        return None
+
+    valid_cols: list[str] = []
+    seen: set[str] = set()
+    for req in requested:
+        resolved = _resolve_projection_token_to_column(req, table_columns)
+        if not resolved:
+            continue
+        lowered = resolved.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        valid_cols.append(resolved)
+
+    return ", ".join(valid_cols) if valid_cols else None
+
+
+def _replace_select_star_projection(sql: str, projection: str) -> str:
+    """Replace leading SELECT * with SELECT <projection> when safe."""
+    return re.sub(r"^\s*SELECT\s+\*\s+FROM\s+", f"SELECT {projection} FROM ", sql, count=1, flags=re.IGNORECASE)
+
+
+def _maybe_add_distinct_for_single_column(sql: str) -> str:
+    """Add DISTINCT for single-column SELECT without aggregations.
+
+    When user requests a single column (e.g., "get country from optins"),
+    they usually expect unique values. Add DISTINCT if:
+    - SQL starts with SELECT <single_column> (not SELECT *)
+    - No GROUP BY, DISTINCT, or aggregations present
+    """
+    normalized = sql.strip().upper()
+    if not normalized.startswith("SELECT "):
+        return sql
+
+    if " DISTINCT " in normalized or "GROUP BY" in normalized:
+        return sql
+
+    if any(agg in normalized for agg in ("COUNT(", "SUM(", "AVG(", "MIN(", "MAX(")):
+        return sql
+
+    match = re.match(r"^\s*SELECT\s+([A-Za-z_][A-Za-z0-9_]*)\s+FROM\s+", sql, re.IGNORECASE)
+    if match:
+        return re.sub(
+            r"^\s*SELECT\s+",
+            "SELECT DISTINCT ",
+            sql,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    return sql
+
+
+def _normalize_generation_strategy(strategy: str) -> str:
+    normalized = (strategy or "").strip().lower()
+    if normalized not in _SUPPORTED_GENERATION_STRATEGIES:
+        supported = ", ".join(sorted(_SUPPORTED_GENERATION_STRATEGIES))
+        raise ValueError(f"Unsupported generation_strategy: {strategy!r}. Supported: {supported}")
+    return normalized
+
+
+def _choose_projection(tokens: list[str], table_columns: list[str], user_question: str = "") -> str:
+    """Choose SQL projection (column list) based on user question and tokens.
+
+    Priority order:
+    1. Explicitly requested columns parsed from natural language
+    2. Fallback to token-based heuristics (e.g., 'userid' in tokens)
+    3. Default to SELECT *
+    """
+    # First, try to extract explicitly named columns from question
+    if user_question:
+        explicit_cols = _extract_projection_from_question(user_question, table_columns)
+        if explicit_cols:
+            return explicit_cols
+
+    # Fallback to token-based heuristic for backward compatibility
     if "userid" in tokens and "userid" in table_columns:
         return "userid"
+
     return "*"
 
 
@@ -303,19 +500,26 @@ def _select_few_shot_sql(user_question: str, few_shot_examples) -> str | None:
 def _generate_sql_with_llm(prompt: str) -> tuple[str | None, str]:
     api_key = _resolve_openai_api_key()
     if not _is_llm_generation_enabled():
+        logger.warning("LLM generation disabled via SQL_GENERATOR_LLM_ENABLED")
         return None, "disabled"
     if not api_key:
+        logger.warning(
+            "LLM generation unavailable: no API key found in OPENAI_API_KEY, "
+            "OPENAI_KEY, OPENAI_TOKEN, or LLM_API_KEY"
+        )
         return None, "missing_api_key"
 
     try:
         from langchain_openai import ChatOpenAI
     except Exception:  # noqa: BLE001
+        logger.exception("LLM generation unavailable: failed to import langchain_openai")
         return None, "client_unavailable"
 
     try:
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         llm = ChatOpenAI(
             api_key=api_key,
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            model=model_name,
             temperature=0,
         )
         response = llm.invoke(
@@ -333,9 +537,15 @@ def _generate_sql_with_llm(prompt: str) -> tuple[str | None, str]:
             content = "\n".join(str(item) for item in content)
         sql = _extract_sql_candidate(str(content))
         if not _is_read_only_sql(sql):
+            logger.warning(
+                "LLM returned unsafe or non-read-only output for model {}",
+                model_name,
+            )
             return None, "unsafe_output"
+        logger.info("LLM generated read-only SQL successfully with model {}", model_name)
         return sql, "ok"
     except Exception:  # noqa: BLE001
+        logger.exception("LLM generation failed while invoking the model")
         return None, "error"
 
 
@@ -393,10 +603,12 @@ def _generate_deterministic_sql(
             intent,
         )
 
-    projection = _choose_projection(tokens, table_columns)
+    projection = _choose_projection(tokens, table_columns, user_question)
     where_clause = f" WHERE {country_filter}" if country_filter else ""
+    sql = f"SELECT {projection} FROM {quoted_table}{where_clause} LIMIT {max_limit}"
+    sql = _maybe_add_distinct_for_single_column(sql)
     return (
-        f"SELECT {projection} FROM {quoted_table}{where_clause} LIMIT {max_limit}",
+        sql,
         (
             f"Detected listing intent; selecting {projection} from table '{table}'"
             + (" with requested country filter" if country_filter else "")
@@ -414,6 +626,7 @@ def generate_read_only_sql(
     dialect: str = "sqlite",
     max_limit: int = 100,
     selected_tables: list[str] | None = None,
+    generation_strategy: str = "auto",
 ) -> SQLGenerationResult:
     """Generate a read-only SQL query from question + schema context.
 
@@ -421,6 +634,7 @@ def generate_read_only_sql(
     """
     if max_limit <= 0:
         raise ValueError("max_limit must be greater than zero")
+    strategy = _normalize_generation_strategy(generation_strategy)
 
     prompt = build_sql_generation_prompt(
         user_request=user_question,
@@ -432,6 +646,7 @@ def generate_read_only_sql(
     llm_sql, llm_status = _generate_sql_with_llm(prompt)
     llm_notice = _llm_notice_for_status(llm_status)
     if llm_sql:
+        llm_sql = _maybe_add_distinct_for_single_column(llm_sql)
         return SQLGenerationResult(
             sql=llm_sql,
             rationale="Generated via LLM using schema context and few-shot prompt examples.",
@@ -443,11 +658,32 @@ def generate_read_only_sql(
             llm_user_notice=llm_notice,
         )
 
+    if strategy == "llm_only":
+        raise RuntimeError(f"LLM-only generation failed (status={llm_status}).")
+
     matched_few_shot_sql = _select_few_shot_sql(user_question, few_shot_examples)
     if matched_few_shot_sql and _is_read_only_sql(matched_few_shot_sql):
+        tokens = _tokenize(user_question)
+        schema_map = _parse_schema_context(schema_context)
+        selected_table = _choose_table(tokens, schema_map)
+        table_columns = schema_map.get(selected_table, []) if selected_table else []
+        projection = _choose_projection(tokens, table_columns, user_question)
+
+        sql_to_use = matched_few_shot_sql
+        rationale = "Matched a table-aware few-shot example and reused its SQL pattern."
+        if projection != "*" and re.match(r"^\s*SELECT\s+\*\s+FROM\s+", matched_few_shot_sql, flags=re.IGNORECASE):
+            rewritten_sql = _replace_select_star_projection(matched_few_shot_sql, projection)
+            if _is_read_only_sql(rewritten_sql):
+                sql_to_use = rewritten_sql
+                rationale = (
+                    "Matched a table-aware few-shot example and adapted SELECT projection "
+                    "from user-requested fields."
+                )
+
+        sql_to_use = _maybe_add_distinct_for_single_column(sql_to_use)
         return SQLGenerationResult(
-            sql=matched_few_shot_sql,
-            rationale="Matched a table-aware few-shot example and reused its SQL pattern.",
+            sql=sql_to_use,
+            rationale=rationale,
             table_used=None,
             intent="few_shot",
             prompt=prompt,
@@ -475,7 +711,7 @@ def generate_read_only_sql(
     )
 
 
-def build_sql_generator_node(*, max_limit: int = 100):
+def build_sql_generator_node(*, max_limit: int = 100, generation_strategy: str = "auto"):
     """Return a LangGraph-compatible SQL generator node."""
 
     def node(state: dict) -> dict:
@@ -483,6 +719,7 @@ def build_sql_generator_node(*, max_limit: int = 100):
         schema_context = state.get("schema_context") or ""
         dialect = state.get("dialect", "sqlite")
         selected_tables = state.get("selected_tables")
+        strategy = state.get("sql_generation_strategy", generation_strategy)
         try:
             result = generate_read_only_sql(
                 question,
@@ -490,6 +727,7 @@ def build_sql_generator_node(*, max_limit: int = 100):
                 dialect=dialect,
                 max_limit=max_limit,
                 selected_tables=selected_tables,
+                generation_strategy=strategy,
             )
             return {
                 "generated_sql": result.sql,
@@ -503,7 +741,7 @@ def build_sql_generator_node(*, max_limit: int = 100):
                     "sql_generator: SQL generated"
                     f" (intent={result.intent}, table={result.table_used}, "
                     f"few_shot_count={result.few_shot_count}, "
-                    f"llm_status={result.llm_status})"
+                    f"llm_status={result.llm_status}, strategy={strategy})"
                 ],
                 "agent_events": [
                     make_agent_event(
@@ -519,6 +757,7 @@ def build_sql_generator_node(*, max_limit: int = 100):
                             "few_shot_count": result.few_shot_count,
                             "selected_tables": selected_tables,
                             "llm_status": result.llm_status,
+                            "generation_strategy": strategy,
                         },
                     )
                 ],

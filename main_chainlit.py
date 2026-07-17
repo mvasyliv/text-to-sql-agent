@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -27,27 +26,13 @@ def _is_enabled(value: str | None, default: bool = True) -> bool:
 
 
 def _build_chainlit_base_command() -> list[str]:
-    """Resolve a runnable Chainlit command for the current machine.
-
-    Resolution order:
-    1) current interpreter module (`python -m chainlit`)
-    2) shell executable (`chainlit`)
-    3) project-managed executable (`uv run chainlit`)
-    """
+    """Build Chainlit command for the active interpreter only."""
     if importlib.util.find_spec("chainlit") is not None:
         return [sys.executable, "-m", "chainlit"]
 
-    chainlit_bin = shutil.which("chainlit")
-    if chainlit_bin:
-        return [chainlit_bin]
-
-    uv_bin = shutil.which("uv")
-    if uv_bin:
-        return [uv_bin, "run", "chainlit"]
-
     raise RuntimeError(
-        "Chainlit is unavailable. Install dependencies with 'uv sync' or install "
-        "chainlit in the active Python environment."
+        "Chainlit module is unavailable in the active interpreter. "
+        "Use venvtext2sql and run 'uv sync'."
     )
 
 

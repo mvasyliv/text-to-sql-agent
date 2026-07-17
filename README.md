@@ -24,6 +24,7 @@ PR title: type: short summary [T-YYYY-MM-DD-NNN]; merge to main only via PR.
     - `STREAMLIT_DISPLAY_NAME`
 
 Both launchers load runtime environment values and pick a free localhost port when the corresponding `CHAINLIT_PORT` or `STREAMLIT_PORT` is not set.
+Launchers require the canonical interpreter `venvtext2sql/bin/python` and do not fall back to system Python.
 
 ## Query Graph (Current)
 

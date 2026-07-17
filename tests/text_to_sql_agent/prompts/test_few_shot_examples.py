@@ -9,6 +9,10 @@ from text_to_sql_agent.prompts.few_shot_examples import (
     get_few_shot_examples_for_tables,
     get_formatted_few_shot_examples,
 )
+from text_to_sql_agent.prompts.few_shot_examples_activities_eventdate import (
+    SQLITE_ACTIVITIES_EVENTDATE_EXAMPLES,
+)
+from text_to_sql_agent.prompts.few_shot_examples_optins import SQLITE_OPTINS_EXAMPLES
 
 
 def test_sqlite_includes_activities_country_example() -> None:
@@ -50,8 +54,14 @@ def test_get_formatted_few_shot_examples_for_empty_dialect() -> None:
 
 def test_get_few_shot_examples_for_tables_filters_by_table_name() -> None:
     filtered = get_few_shot_examples_for_tables("sqlite", ["activities_eventdate"])
-    assert len(filtered) == len(SQLITE_FEW_SHOT_EXAMPLES)
+    assert len(filtered) == len(SQLITE_ACTIVITIES_EVENTDATE_EXAMPLES)
     assert all("activities_eventdate" in example.tables for example in filtered)
+
+
+def test_get_few_shot_examples_for_tables_filters_optins() -> None:
+    filtered = get_few_shot_examples_for_tables("sqlite", ["optins"])
+    assert len(filtered) == len(SQLITE_OPTINS_EXAMPLES)
+    assert all("optins" in example.tables for example in filtered)
 
 
 def test_get_few_shot_examples_for_tables_returns_empty_for_non_matching_table() -> None:

@@ -8,6 +8,186 @@ Rules:
 - Write every entry in English.
 
 
+## 2026-06-29
+
+### T-2026-06-29-143 - Log concrete LLM fallback reasons to terminal
+
+- **Goal**: Surface the exact LLM fallback cause in terminal logs when SQL generation does not use the model.
+- **Implementation**:
+  - Added `from loguru import logger` to `src/text_to_sql_agent/agents/sql_generator_agent.py`.
+  - Logged a warning when LLM generation is disabled via `SQL_GENERATOR_LLM_ENABLED`.
+  - Logged a warning when no API key is available from `OPENAI_API_KEY`, `OPENAI_KEY`, `OPENAI_TOKEN`, or `LLM_API_KEY`.
+  - Logged an exception when `langchain_openai` cannot be imported.
+  - Logged a warning for unsafe/non-read-only model output.
+  - Logged an exception when the LLM invocation itself fails, which is the direct path that returns `llm_status = "error"`.
+- **Validation**:
+  - `get_errors` reports no diagnostics in the modified agent file.
+  - Simple source inspection confirmed the new log strings are present in the agent module.
+- **Outcome**: Terminal output now shows the real reason behind the fallback or `error` status instead of only the generic UI notice.
+
+### T-2026-06-29-142 - Expose llm_status in SQL approval UI
+
+- **Goal**: Make LLM fallback reasons immediately visible to users in approval messages without requiring log inspection.
+- **Implementation**:
+  - Updated `src/text_to_sql_agent/ui/streamlit_app.py`:
+    - `_build_sql_approval_markdown()` now renders `LLM status: **...**` when `llm_status` is present in state.
+  - Updated `src/text_to_sql_agent/ui/chainlit_app.py`:
+    - `_render_sql_approval()` now renders `LLM status: **...**` in the approval message when `llm_status` is present.
+  - Updated focused tests:
+    - `tests/text_to_sql_agent/ui/test_streamlit_app.py`
+    - `tests/text_to_sql_agent/ui/test_chainlit_app.py`
+    - Added assertions that the new status line is included in rendered content.
+- **Validation**:
+  - Diagnostics check reports no errors in modified UI and test files.
+  - Test execution was not performed in this environment due the previously identified interpreter symlink issue for the canonical venv.
+- **Outcome**: SQL approval UI now exposes the concrete LLM status (for example `missing_api_key`, `client_unavailable`, `error`) to simplify troubleshooting.
+
+### T-2026-06-29-141 - Enforce venvtext2sql-only interpreter policy in launchers
+
+- **Goal**: Verify and enforce that project launchers run only with the canonical `venvtext2sql` interpreter.
+- **Findings**:
+  - `run_main_chainlit.sh` and `run_main_streamlit.sh` used fallback paths (`python3`, `python`, `uv run python`) when `venvtext2sql/bin/python` was unavailable.
+  - `main_chainlit.py` and `main_streamlit.py` accepted fallback execution via shell binaries (`chainlit`, `streamlit`) and `uv run`.
+- **Implementation**:
+  - Updated `run_main_chainlit.sh` and `run_main_streamlit.sh` to require `venvtext2sql/bin/python` and exit with a clear error when missing.
+  - Removed non-canonical fallback execution paths from both shell launchers.
+  - Updated `main_chainlit.py` and `main_streamlit.py` to execute only via the active interpreter module (`python -m chainlit` / `python -m streamlit`) and fail fast with guidance to use `venvtext2sql`.
+  - Updated `README.md` launcher note and `CONTRIBUTING.md` test/lint commands to consistently reference `venvtext2sql/bin/python`.
+- **Validation**:
+  - Static check by code inspection confirms all UI launcher paths now require the canonical interpreter and no longer call system Python fallback paths.
+  - Tests were not executed in this environment due broken local `venvtext2sql` interpreter symlink state recorded earlier.
+- **Outcome**: Project launcher behavior is now aligned with the canonical `venvtext2sql`-only policy.
+
+### T-2026-06-29-140 - Harden LLM SQL extraction from mixed-content responses
+
+- **Goal**: Ensure the LLM path is used when model output contains SQL plus short explanatory text instead of plain SQL-only output.
+- **Implementation**:
+  - Updated `_extract_sql_candidate()` in `src/text_to_sql_agent/agents/sql_generator_agent.py`.
+  - Kept fenced SQL extraction behavior unchanged.
+  - Added fallback extraction for non-fenced mixed responses:
+    - find first `SELECT`/`WITH`/`EXPLAIN` token,
+    - extract the first SQL statement up to `;` when present,
+    - otherwise keep the first SQL line.
+  - This prevents unnecessary deterministic/few-shot fallback when the LLM already produced a valid SQL statement with minor surrounding prose.
+- **Validation**:
+  - Added regression test `test_extract_sql_candidate_from_prefixed_llm_text` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Editor diagnostics report no syntax/type errors in touched files.
+  - Could not execute pytest in this environment because project virtualenv executables point to a missing interpreter path (`/home/mykola/miniconda3/bin/python3`).
+- **Outcome**: SQL generation now more reliably uses the LLM result when the response is not strictly SQL-only but still contains a clear read-only SQL statement.
+
+### T-2026-06-29-139 - Add description metadata fields to canonical schema models
+
+- **Goal**: Store human-readable table and column descriptions in the canonical schema contract and expose them consistently in model metadata.
+- **Implementation**:
+  - Kept optional `description: str | None` on `ColumnSchema` and `TableSchema` in `src/text_to_sql_agent/models/schema.py`.
+  - Mapped introspection table comments to `TableSchema.description` in `schema_normalization.py` (`description=raw_table.comment`).
+  - Standardized explicit Pydantic `Field(description=...)` text across `ForeignKeySchema`, `ColumnSchema`, `TableSchema`, and `DatabaseSchema`.
+  - Preserved downstream rendering support in `schema_document_builder.py` for table/column descriptions.
+- **Validation**:
+  - `tests/text_to_sql_agent/models/test_schema.py` covers optional column/table description values.
+  - `tests/text_to_sql_agent/services/test_schema_normalization.py` verifies table comment mapping to `description`.
+- **Outcome**: Canonical schema models now carry business-readable description metadata suitable for prompt context and schema documentation flows.
+
+### T-2026-06-29-138 - Add SQLite few-shot example for activities country UA query
+
+- **Goal**: Provide a domain few-shot pattern for single-country activity lookups against `activities_eventdate`.
+- **Implementation**:
+  - Added example:
+    - input: `Get activities for country UA.`
+    - query: `SELECT * FROM activities_eventdate WHERE (countrycode = 'UA' OR countrycodegeo = 'UA');`
+  - Example is registered under SQLite activities few-shots and later consolidated in `few_shot_examples_activities_eventdate.py` (see also T-2026-06-16-129).
+- **Validation**:
+  - Covered by `tests/text_to_sql_agent/prompts/test_few_shot_examples.py` read-only and formatting checks.
+- **Outcome**: Country-filtered activities queries have a canonical few-shot reference for SQLite generation paths.
+
+### T-2026-06-29-137 - Configure automatic venvtext2sql activation for local development
+
+- **Goal**: Reduce environment drift by auto-selecting the canonical project virtual environment in shell and IDE workflows.
+- **Implementation**:
+  - Added `.envrc` to export `UV_PROJECT_ENVIRONMENT=venvtext2sql` and `source venvtext2sql/bin/activate` when entering the repository (direnv).
+  - Added local `.vscode/settings.json` with:
+    - `python.defaultInterpreterPath` -> `venvtext2sql/bin/python`
+    - `python.terminal.activateEnvironment: true`
+    - dedicated Linux terminal profile `bash (venvtext2sql)`
+  - Added `ms-python.python` recommendation in `.vscode/extensions.json`.
+- **Notes**:
+  - `.vscode/settings.json` remains local-only per repository IDE policy (`.gitignore`).
+  - Complements canonical-environment decision in `docs/DECISIONS.md` and setup guidance in `CONTRIBUTING.md`.
+- **Outcome**: Contributors can open a terminal or reload the workspace and consistently run against `venvtext2sql`.
+
+### T-2026-06-29-136 - Add Chainlit shell launcher script
+
+- **Goal**: Provide a one-command local entrypoint for the Chainlit UI without requiring manual interpreter selection.
+- **Implementation**:
+  - Added executable `run_main_chainlit.sh` at repository root.
+  - Script resolves project root, validates `main_chainlit.py`, prefers `venvtext2sql/bin/python`, and falls back to `uv run python` or `python3`.
+  - Linked launcher usage from `README.md`.
+- **Follow-up**:
+  - Port conflict handling and free-port auto-selection were added later in T-2026-05-26-061.
+  - LLM secret loading in launcher runtime was added in T-2026-05-26-065.
+- **Validation**:
+  - Manual smoke runs confirmed Chainlit startup via `./run_main_chainlit.sh`.
+- **Outcome**: Chainlit UI startup is standardized through a repository-local shell launcher.
+
+## 2026-06-17
+
+### T-2026-06-17-135 - Add LLM-only SQL generation strategy without fallback
+
+- **Issue**: Existing SQL generation always used fallback chain (`LLM -> few-shot -> deterministic`), but user requested a variant that uses only LLM generation.
+- **Solution**:
+  - Added `generation_strategy` parameter to `generate_read_only_sql()` with supported values: `auto`, `llm_only`.
+  - Added strategy validation via `_normalize_generation_strategy()`.
+  - Implemented `llm_only` behavior: when LLM output is unavailable/unsafe, raise an explicit runtime error instead of using few-shot or deterministic fallback.
+  - Extended `build_sql_generator_node()` to accept default `generation_strategy` and allow per-request override from state (`sql_generation_strategy`).
+  - Added `generation_strategy` to SQL generator observability metadata and log message.
+  - Removed duplicate dead code block in `_maybe_add_distinct_for_single_column()` introduced in prior edit.
+- **Validation**:
+  - Added tests in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py` for:
+    - successful `llm_only` mode when LLM returns SQL,
+    - explicit failure in `llm_only` mode when LLM is unavailable,
+    - SQL generator node failure path in `llm_only` mode.
+  - Ran SQL generator test suite: `30 passed`.
+- **Outcome**: The project now supports an explicit "LLM-only" SQL generation path with deterministic failure semantics when LLM cannot produce valid read-only SQL.
+
+### T-2026-06-17-134 - Add automatic DISTINCT for single-column projection queries
+
+- **Issue**: Single-column list requests returned duplicate values (for example, `get country from optins for verticals 1,2,3,4,5` produced repeated country codes).
+- **Root cause**: SQL projection adaptation correctly mapped requested columns, but no deduplication step existed for single-column `SELECT` queries.
+- **Solution**: Added `_maybe_add_distinct_for_single_column()` in `src/text_to_sql_agent/agents/sql_generator_agent.py` and integrated it in all generation paths:
+  - deterministic SQL output,
+  - few-shot SQL output (including `SELECT *` projection rewrites),
+  - LLM SQL output when it returns a simple single-column projection.
+- **Safety guards**:
+  - Skip `DISTINCT` for `SELECT *`.
+  - Skip `DISTINCT` for grouped queries (`GROUP BY`).
+  - Skip `DISTINCT` for aggregate projections (`COUNT(`, `SUM(`, `AVG(`, `MIN(`, `MAX(`).
+- **Validation**:
+  - Added focused tests for DISTINCT behavior in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Updated existing projection/few-shot expectations to include DISTINCT where applicable.
+  - Ran SQL generator test suite: `27 passed`.
+  - Ran full project test suite: `611 passed`.
+- **Outcome**: Single-field list queries now return unique values by default, aligning generated SQL with user expectations for deduplicated listings.
+
+### T-2026-06-17-130 - Add few-shot example for userid query with verticals for optins table
+
+- **Issue**: User asked for "get list userid from optins for verticals 1,2,3,4,5" but agent generated `SELECT * FROM optins WHERE verticalid IN (1,2,3,4,5);` instead of selecting only userid column.
+- **Root cause**: The few-shot example registry for optins table had only "Get optins for verticals 1,2,3,4,5" → `SELECT *`, without an explicit example showing that userid projection should be selected when requested.
+- **Solution**: Added new few-shot example to `src/text_to_sql_agent/prompts/few_shot_examples_optins.py`:
+  ```python
+  FewShotExample(
+      input="Get userid from optins for verticals 1,2,3,4,5",
+      query="SELECT userid FROM optins WHERE verticalid IN (1,2,3,4,5);",
+      tables=_SQLITE_OPTINS_TABLE,
+  ),
+  ```
+  - Placed **before** the generic "Get optins for verticals" example so LLM sees the userid variant first.
+  - Mirrors the pattern already established for activities_eventdate (which had similar examples).
+- **Validation**:
+  - Verified all 6 few-shot examples for optins load correctly.
+  - Added regression test `test_optins_userid_with_verticals_few_shot()` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - All 17 SQL generator tests pass.
+- **Outcome**: Agent now correctly generates `SELECT userid FROM optins WHERE verticalid IN (...)` when users explicitly request userid with vertical filters.
+
 ## 2026-06-16
 
 ### T-2026-06-16-129 - Refactor activities_eventdate few-shot examples into dedicated module
@@ -1920,3 +2100,70 @@ LOG_LEVEL_REPOSITORY=DEBUG
 - Updated `.gitignore` to exclude `.env`, `.env.prod`, `.env.local`.
 - Added `data/` and `logs/` directories to ignore list.
 - Added IDE and OS files to ignore list (VS Code, IntelliJ, .DS_Store, etc.).
+
+## 2026-06-17 (continued)
+
+### T-2026-06-17-133 - Extend shorthand projection aliases for geo/date/id field requests
+
+- **Goal**: Improve projection extraction when users do not know exact schema column names and use shorthand terms.
+- **Implementation**:
+  - Extended `_PROJECTION_ALIASES` in `sql_generator_agent.py` with additional mappings:
+    - `geo`, `countrygeo`, `geocountry` -> `countrycodegeo`
+    - `uid`, `user_id` -> `userid`
+    - `vid`, `vertical_id` -> `verticalid`
+    - `entered`, `entry`, `date`, `datetime`, `timestamp` -> `dtentered`
+  - Reused existing tolerant projection rewrite flow so few-shot SQL templates with `SELECT *` are rewritten to inferred aliases while preserving WHERE clauses.
+- **Validation**:
+  - Added tests:
+    - `test_extract_projection_matches_geo_alias()`
+    - `test_extract_projection_matches_entered_alias()`
+    - `test_optins_entered_alias_rewrites_few_shot_projection()`
+    - `test_activities_geo_alias_rewrites_few_shot_projection()`
+  - Ran `pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q` -> all tests passed.
+- **Outcome**: Shorthand prompts like `get geo ...` and `get entered ...` now generate column-specific SELECT projections without requiring users to know canonical schema names.
+
+### T-2026-06-17-132 - Map partial field names to schema columns and adapt few-shot SELECT projection
+
+- **Problem**: User prompts can include partial or non-exact field names (for example, `country`) and typos (`frop`). In these cases, few-shot matching could return `SELECT *` even when a specific projection was intended.
+- **Root cause**:
+  - Projection extraction accepted only exact column tokens.
+  - Few-shot SQL reuse was applied before deterministic projection logic and did not rewrite `SELECT *`.
+- **Implementation**:
+  - Added tolerant token-to-column resolution in `sql_generator_agent.py`:
+    - alias mapping (`country` -> `countrycode`, `user` -> `userid`, `vertical` -> `verticalid`),
+    - prefix/substring matching for partial names,
+    - close-match fallback using `difflib.get_close_matches`.
+  - Hardened projection extraction boundary markers to stop parsing on SQL-clause words and common typo separators (`frop`, `form`, `fro`).
+  - Added safe projection rewrite helper for few-shot SQL:
+    - when a matched few-shot query starts with `SELECT *`, replace `*` with inferred projection,
+    - keep original few-shot WHERE clause (for example, `verticalid IN (...)`),
+    - preserve read-only SQL validation before returning rewritten SQL.
+- **Validation**:
+  - Added regression test `test_optins_partial_country_name_rewrites_few_shot_projection()`.
+  - Added direct extraction test `test_extract_projection_matches_partial_country_token()`.
+  - Ran `pytest tests/text_to_sql_agent/agents/test_sql_generator_agent.py -q` -> all tests passed.
+- **Outcome**: Query phrasing like `get country frop optins for verticals 1,2,3,4,5` now resolves to `SELECT countrycode ...` while preserving the few-shot vertical filter.
+
+### T-2026-06-17-131 - Implement deterministic column projection extraction from user questions
+
+- **Problem**: System required few-shot examples for each combination of columns (userid, countrycode, gender, etc.). This does not scale as table schema grows.
+- **Solution 1 - Deterministic parser**: Added `_extract_projection_from_question(user_question, table_columns)` to parse explicitly requested columns from natural language using regex patterns:
+  - Matches patterns like "get <col1> and <col2>" or "get <col1>, <col2>"
+  - Replaces "and" with commas for consistent parsing
+  - Filters extracted names against valid schema columns (case-insensitive matching)
+  - Returns comma-separated valid columns or None if no explicit columns found
+- **Solution 2 - Priority-based projection selection**: Updated `_choose_projection()` with three-tier priority:
+  1. **Tier 1**: Explicit columns parsed from question (deterministic, high confidence)
+  2. **Tier 2**: Token-based heuristic for backward compatibility (e.g., userid in tokens)
+  3. **Tier 3**: Default to SELECT * (safe fallback)
+- **Supporting few-shot examples**: Added 2 new few-shot examples to `few_shot_examples_optins.py`:
+  - "Get userid and countrycode from optins" → `SELECT userid, countrycode FROM optins LIMIT 100`
+  - "Get userid, countrycode, gender from optins" → `SELECT userid, countrycode, gender FROM optins LIMIT 100`
+  - These serve as reference templates for LLM and provide coverage for common multi-column queries
+- **Validation**:
+  - All 8 unit tests for projection extraction pass (single column, multiple with 'and', multiple with commas, invalid columns filtered, no explicit columns returns None)
+  - All 72 existing tests still pass (backward compatibility maintained)
+  - End-to-end SQL generation tests verify correct projection in deterministic and few-shot modes
+- **Impact**: System now dynamically handles arbitrary column combinations without requiring explicit few-shot examples for each variant. Scales with table schema changes.
+- **Architecture**: Follows functional-first style — pure projection extraction function with no side effects, testable in isolation.
+

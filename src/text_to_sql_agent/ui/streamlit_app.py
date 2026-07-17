@@ -73,10 +73,13 @@ def _build_sql_approval_markdown(state: dict[str, Any]) -> str:
     sql = str(state.get("generated_sql") or "")
     llm_notice = str(state.get("llm_user_notice") or "").strip()
     generation_mode = str(state.get("sql_generation_mode") or "Deterministic").strip()
+    llm_status = str(state.get("llm_status") or "").strip()
     prefix = f"{llm_notice}\n\n" if llm_notice else ""
+    llm_status_line = f"LLM status: **{llm_status}**\n\n" if llm_status else ""
     return (
         f"{prefix}Proposed SQL query\n\n"
         f"Generation mode: **{generation_mode}**\n\n"
+        f"{llm_status_line}"
         f"{render_sql_preview(sql)}"
     )
 
