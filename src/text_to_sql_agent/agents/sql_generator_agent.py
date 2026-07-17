@@ -14,6 +14,8 @@ import re
 from difflib import get_close_matches
 from dataclasses import dataclass
 
+from loguru import logger
+
 from text_to_sql_agent.prompts import build_sql_generation_prompt
 from text_to_sql_agent.prompts import get_few_shot_examples_for_tables
 from text_to_sql_agent.services.audit_trail import make_agent_event
@@ -181,10 +183,25 @@ def _resolve_openai_api_key() -> str | None:
 
 
 def _extract_sql_candidate(text: str) -> str:
-    fenced = _SQL_FENCE_RE.search(text)
+    raw = text.strip()
+    fenced = _SQL_FENCE_RE.search(raw)
     if fenced:
         return fenced.group(1).strip()
-    return text.strip()
+
+    if _is_read_only_sql(raw):
+        return raw
+
+    start_match = re.search(r"\b(?:select|with|explain)\b", raw, re.IGNORECASE)
+    if not start_match:
+        return raw
+
+    candidate = raw[start_match.start() :].strip()
+    if ";" in candidate:
+        first_statement = candidate.split(";", 1)[0].strip()
+        return f"{first_statement};"
+
+    first_line = candidate.splitlines()[0].strip() if candidate else ""
+    return first_line
 
 
 def _is_read_only_sql(sql: str) -> bool:
@@ -483,19 +500,26 @@ def _select_few_shot_sql(user_question: str, few_shot_examples) -> str | None:
 def _generate_sql_with_llm(prompt: str) -> tuple[str | None, str]:
     api_key = _resolve_openai_api_key()
     if not _is_llm_generation_enabled():
+        logger.warning("LLM generation disabled via SQL_GENERATOR_LLM_ENABLED")
         return None, "disabled"
     if not api_key:
+        logger.warning(
+            "LLM generation unavailable: no API key found in OPENAI_API_KEY, "
+            "OPENAI_KEY, OPENAI_TOKEN, or LLM_API_KEY"
+        )
         return None, "missing_api_key"
 
     try:
         from langchain_openai import ChatOpenAI
     except Exception:  # noqa: BLE001
+        logger.exception("LLM generation unavailable: failed to import langchain_openai")
         return None, "client_unavailable"
 
     try:
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         llm = ChatOpenAI(
             api_key=api_key,
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            model=model_name,
             temperature=0,
         )
         response = llm.invoke(
@@ -513,9 +537,15 @@ def _generate_sql_with_llm(prompt: str) -> tuple[str | None, str]:
             content = "\n".join(str(item) for item in content)
         sql = _extract_sql_candidate(str(content))
         if not _is_read_only_sql(sql):
+            logger.warning(
+                "LLM returned unsafe or non-read-only output for model {}",
+                model_name,
+            )
             return None, "unsafe_output"
+        logger.info("LLM generated read-only SQL successfully with model {}", model_name)
         return sql, "ok"
     except Exception:  # noqa: BLE001
+        logger.exception("LLM generation failed while invoking the model")
         return None, "error"
 
 

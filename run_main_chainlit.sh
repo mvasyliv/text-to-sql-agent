@@ -12,22 +12,6 @@ if [[ ! -f "$MAIN" ]]; then
 	exit 1
 fi
 
-resolve_python() {
-	if [[ -x "$VENV_PYTHON" ]]; then
-		echo "$VENV_PYTHON"
-		return
-	fi
-	if command -v python3 >/dev/null 2>&1; then
-		command -v python3
-		return
-	fi
-	if command -v python >/dev/null 2>&1; then
-		command -v python
-		return
-	fi
-	echo ""
-}
-
 find_free_port() {
 	local python_bin="$1"
 	"$python_bin" - "$@" <<'PY'
@@ -47,11 +31,12 @@ raise SystemExit(1)
 PY
 }
 
-PYTHON_BIN="$(resolve_python)"
-if [[ -z "$PYTHON_BIN" ]]; then
-	echo "Error: Python interpreter not found." >&2
+if [[ ! -x "$VENV_PYTHON" ]]; then
+	echo "Error: venvtext2sql interpreter not found at $VENV_PYTHON" >&2
+	echo "Run 'uv sync' to create/update the canonical environment." >&2
 	exit 1
 fi
+PYTHON_BIN="$VENV_PYTHON"
 
 if [[ -z "${CHAINLIT_PORT:-}" ]]; then
 	if FREE_PORT="$(find_free_port "$PYTHON_BIN")"; then
@@ -60,12 +45,4 @@ if [[ -z "${CHAINLIT_PORT:-}" ]]; then
 	fi
 fi
 
-if [[ -x "$VENV_PYTHON" ]]; then
-	exec "$VENV_PYTHON" "$MAIN" "$@"
-fi
-
-if command -v uv >/dev/null 2>&1; then
-	exec uv run python "$MAIN" "$@"
-fi
-
-exec python3 "$MAIN" "$@"
+exec "$VENV_PYTHON" "$MAIN" "$@"

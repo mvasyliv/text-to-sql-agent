@@ -10,6 +10,71 @@ Rules:
 
 ## 2026-06-29
 
+### T-2026-06-29-143 - Log concrete LLM fallback reasons to terminal
+
+- **Goal**: Surface the exact LLM fallback cause in terminal logs when SQL generation does not use the model.
+- **Implementation**:
+  - Added `from loguru import logger` to `src/text_to_sql_agent/agents/sql_generator_agent.py`.
+  - Logged a warning when LLM generation is disabled via `SQL_GENERATOR_LLM_ENABLED`.
+  - Logged a warning when no API key is available from `OPENAI_API_KEY`, `OPENAI_KEY`, `OPENAI_TOKEN`, or `LLM_API_KEY`.
+  - Logged an exception when `langchain_openai` cannot be imported.
+  - Logged a warning for unsafe/non-read-only model output.
+  - Logged an exception when the LLM invocation itself fails, which is the direct path that returns `llm_status = "error"`.
+- **Validation**:
+  - `get_errors` reports no diagnostics in the modified agent file.
+  - Simple source inspection confirmed the new log strings are present in the agent module.
+- **Outcome**: Terminal output now shows the real reason behind the fallback or `error` status instead of only the generic UI notice.
+
+### T-2026-06-29-142 - Expose llm_status in SQL approval UI
+
+- **Goal**: Make LLM fallback reasons immediately visible to users in approval messages without requiring log inspection.
+- **Implementation**:
+  - Updated `src/text_to_sql_agent/ui/streamlit_app.py`:
+    - `_build_sql_approval_markdown()` now renders `LLM status: **...**` when `llm_status` is present in state.
+  - Updated `src/text_to_sql_agent/ui/chainlit_app.py`:
+    - `_render_sql_approval()` now renders `LLM status: **...**` in the approval message when `llm_status` is present.
+  - Updated focused tests:
+    - `tests/text_to_sql_agent/ui/test_streamlit_app.py`
+    - `tests/text_to_sql_agent/ui/test_chainlit_app.py`
+    - Added assertions that the new status line is included in rendered content.
+- **Validation**:
+  - Diagnostics check reports no errors in modified UI and test files.
+  - Test execution was not performed in this environment due the previously identified interpreter symlink issue for the canonical venv.
+- **Outcome**: SQL approval UI now exposes the concrete LLM status (for example `missing_api_key`, `client_unavailable`, `error`) to simplify troubleshooting.
+
+### T-2026-06-29-141 - Enforce venvtext2sql-only interpreter policy in launchers
+
+- **Goal**: Verify and enforce that project launchers run only with the canonical `venvtext2sql` interpreter.
+- **Findings**:
+  - `run_main_chainlit.sh` and `run_main_streamlit.sh` used fallback paths (`python3`, `python`, `uv run python`) when `venvtext2sql/bin/python` was unavailable.
+  - `main_chainlit.py` and `main_streamlit.py` accepted fallback execution via shell binaries (`chainlit`, `streamlit`) and `uv run`.
+- **Implementation**:
+  - Updated `run_main_chainlit.sh` and `run_main_streamlit.sh` to require `venvtext2sql/bin/python` and exit with a clear error when missing.
+  - Removed non-canonical fallback execution paths from both shell launchers.
+  - Updated `main_chainlit.py` and `main_streamlit.py` to execute only via the active interpreter module (`python -m chainlit` / `python -m streamlit`) and fail fast with guidance to use `venvtext2sql`.
+  - Updated `README.md` launcher note and `CONTRIBUTING.md` test/lint commands to consistently reference `venvtext2sql/bin/python`.
+- **Validation**:
+  - Static check by code inspection confirms all UI launcher paths now require the canonical interpreter and no longer call system Python fallback paths.
+  - Tests were not executed in this environment due broken local `venvtext2sql` interpreter symlink state recorded earlier.
+- **Outcome**: Project launcher behavior is now aligned with the canonical `venvtext2sql`-only policy.
+
+### T-2026-06-29-140 - Harden LLM SQL extraction from mixed-content responses
+
+- **Goal**: Ensure the LLM path is used when model output contains SQL plus short explanatory text instead of plain SQL-only output.
+- **Implementation**:
+  - Updated `_extract_sql_candidate()` in `src/text_to_sql_agent/agents/sql_generator_agent.py`.
+  - Kept fenced SQL extraction behavior unchanged.
+  - Added fallback extraction for non-fenced mixed responses:
+    - find first `SELECT`/`WITH`/`EXPLAIN` token,
+    - extract the first SQL statement up to `;` when present,
+    - otherwise keep the first SQL line.
+  - This prevents unnecessary deterministic/few-shot fallback when the LLM already produced a valid SQL statement with minor surrounding prose.
+- **Validation**:
+  - Added regression test `test_extract_sql_candidate_from_prefixed_llm_text` in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Editor diagnostics report no syntax/type errors in touched files.
+  - Could not execute pytest in this environment because project virtualenv executables point to a missing interpreter path (`/home/mykola/miniconda3/bin/python3`).
+- **Outcome**: SQL generation now more reliably uses the LLM result when the response is not strictly SQL-only but still contains a clear read-only SQL statement.
+
 ### T-2026-06-29-139 - Add description metadata fields to canonical schema models
 
 - **Goal**: Store human-readable table and column descriptions in the canonical schema contract and expose them consistently in model metadata.

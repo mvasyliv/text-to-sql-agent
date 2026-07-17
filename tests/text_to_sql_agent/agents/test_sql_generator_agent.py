@@ -400,6 +400,11 @@ class TestGenerateReadOnlySql:
         result = sql_generator_agent_module._maybe_add_distinct_for_single_column(sql)
         assert result == sql
         assert "DISTINCT" not in result
+
+    def test_extract_sql_candidate_from_prefixed_llm_text(self):
+        content = "Here is your SQL query:\nSELECT userid FROM activities_eventdate LIMIT 5;\nThis query is read-only."
+        candidate = sql_generator_agent_module._extract_sql_candidate(content)
+        assert candidate == "SELECT userid FROM activities_eventdate LIMIT 5;"
 class TestBuildSqlGeneratorNode:
     def test_node_populates_generated_sql_and_rationale(self):
         node = build_sql_generator_node(max_limit=25)

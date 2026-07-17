@@ -172,16 +172,19 @@ async def _render_sql_approval(turn: QueryTurnResult) -> None:
     sql = str(turn.state.get("generated_sql") or "")
     llm_notice = str(turn.state.get("llm_user_notice") or "").strip()
     generation_mode = str(turn.state.get("sql_generation_mode") or "Deterministic").strip()
+    llm_status = str(turn.state.get("llm_status") or "").strip()
     actions = [
         cl.Action(name="approve_sql", payload={}, label="Approve"),
         cl.Action(name="reject_sql", payload={}, label="Reject"),
         cl.Action(name="edit_sql", payload={}, label="Edit"),
     ]
     prefix = f"{llm_notice}\n\n" if llm_notice else ""
+    llm_status_line = f"LLM status: **{llm_status}**\n\n" if llm_status else ""
     await cl.Message(
         content=(
             f"{prefix}Proposed SQL query:\n"
             f"Generation mode: **{generation_mode}**\n\n"
+            f"{llm_status_line}"
             f"{render_sql_preview(sql)}\n\n"
             "Choose one action: approve, reject, or edit."
         ),

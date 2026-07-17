@@ -13,6 +13,27 @@ _None_
 
 ### Added
 
+- Logged concrete LLM fallback reasons to terminal with loguru (T-2026-06-29-143):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` to log why LLM generation was disabled, missing a key, missing the client package, unsafe, or failed during invocation.
+  - The `error` path now emits a logged exception, which should make terminal troubleshooting much easier.
+
+- Exposed explicit `LLM status` in SQL approval UI (T-2026-06-29-142):
+  - Updated `src/text_to_sql_agent/ui/streamlit_app.py` and `src/text_to_sql_agent/ui/chainlit_app.py` to render `LLM status: **...**` when available.
+  - Makes fallback causes directly visible to users (`missing_api_key`, `client_unavailable`, `error`, etc.) alongside generation mode.
+  - Added focused assertions in `tests/text_to_sql_agent/ui/test_streamlit_app.py` and `tests/text_to_sql_agent/ui/test_chainlit_app.py`.
+
+- Enforced strict `venvtext2sql` interpreter usage for UI launchers (T-2026-06-29-141):
+  - Updated `run_main_chainlit.sh` and `run_main_streamlit.sh` to require `venvtext2sql/bin/python` and fail fast if it is missing.
+  - Removed fallback execution via system Python and `uv run python` in both shell launchers.
+  - Updated `main_chainlit.py` and `main_streamlit.py` to run Chainlit/Streamlit only through the active interpreter module (`python -m ...`) and removed fallback to shell binaries/`uv run`.
+  - Updated `README.md` and `CONTRIBUTING.md` to reflect the canonical interpreter-only workflow.
+
+- Hardened LLM SQL extraction for mixed-content model responses (T-2026-06-29-140):
+  - Updated `src/text_to_sql_agent/agents/sql_generator_agent.py` so `_extract_sql_candidate()` can recover SQL when the model returns short prose plus SQL.
+  - Preserved fenced-SQL behavior and added non-fenced extraction of the first `SELECT`/`WITH`/`EXPLAIN` statement.
+  - Added regression coverage in `tests/text_to_sql_agent/agents/test_sql_generator_agent.py`.
+  - Reduces unnecessary fallback to deterministic/few-shot generation when LLM already produced valid SQL.
+
 - Added description metadata fields to canonical schema models (T-2026-06-29-139):
   - Updated `src/text_to_sql_agent/models/schema.py` with optional `description` on `ColumnSchema` and `TableSchema`.
   - Mapped introspection table comments to `TableSchema.description` in `src/text_to_sql_agent/services/schema_normalization.py`.

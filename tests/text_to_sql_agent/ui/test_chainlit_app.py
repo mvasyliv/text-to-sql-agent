@@ -116,6 +116,7 @@ def test_render_sql_approval_shows_llm_notice(monkeypatch):
             "generated_sql": "SELECT 1",
             "llm_user_notice": "LLM is unavailable right now.",
             "sql_generation_mode": "Few-shot fallback",
+            "llm_status": "missing_api_key",
         },
     )
 
@@ -124,6 +125,7 @@ def test_render_sql_approval_shows_llm_notice(monkeypatch):
     assert "LLM is unavailable right now." in sent_messages[0]
     assert "Proposed SQL query:" in sent_messages[0]
     assert "Generation mode: **Few-shot fallback**" in sent_messages[0]
+    assert "LLM status: **missing_api_key**" in sent_messages[0]
 
 
 def test_resolve_authenticated_identity_from_session_user(monkeypatch):

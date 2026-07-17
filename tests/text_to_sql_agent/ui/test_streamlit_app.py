@@ -48,10 +48,12 @@ def test_build_sql_approval_markdown_includes_mode_and_sql() -> None:
         {
             "generated_sql": "SELECT * FROM users;",
             "sql_generation_mode": "LLM",
+            "llm_status": "ok",
         }
     )
 
     assert "Generation mode: **LLM**" in content
+    assert "LLM status: **ok**" in content
     assert "```sql" in content
     assert "SELECT * FROM users;" in content
 

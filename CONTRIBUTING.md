@@ -65,12 +65,12 @@ source venvtext2sql/bin/activate
 
 Run tests:
 ```bash
-uv run pytest -q
+venvtext2sql/bin/python -m pytest -q
 ```
 
 Run linting:
 ```bash
-uv run ruff check src tests
+venvtext2sql/bin/python -m ruff check src tests
 ```
 
 ## Task Tracking
