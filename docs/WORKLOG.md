@@ -7,6 +7,16 @@ Rules:
 - Reference task IDs from `docs/TASKS.md`.
 - Write every entry in English.
 
+## 2026-09-21
+
+### T-2026-09-21-001 - Document SQL package metadata
+
+- Added a module docstring describing the SQL package responsibilities.
+- Declared `__version__ = "0.0.1"` to match the repository package initializer convention.
+- Validation:
+  - `venvtext2sql/bin/python -m py_compile src/text_to_sql_agent/sql/__init__.py`
+  - `PYTHONPATH=src venvtext2sql/bin/python -c 'import text_to_sql_agent.sql as sql; assert sql.__version__ == "0.0.1"'`
+
 
 ## 2026-07-17
 
